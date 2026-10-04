@@ -146,6 +146,9 @@
   </div>
 
   <script>
+    // Store chat history array for memory persistence
+    let messagesHistory = [];
+
     document.getElementById('tunnel-url').value = localStorage.getItem('cf_tunnel_url') || '';
 
     document.getElementById('tunnel-url').addEventListener('input', (e) => {
@@ -167,6 +170,9 @@
 
       baseUrl = baseUrl.replace(/\/$/, "");
 
+      // Append user prompt to state & UI
+      messagesHistory.push({ role: 'user', content: prompt });
+
       const userMsgDiv = document.createElement('div');
       userMsgDiv.className = 'message user';
       userMsgDiv.textContent = prompt;
@@ -183,12 +189,12 @@
       chatBox.scrollTop = chatBox.scrollHeight;
 
       try {
-        const response = await fetch(`${baseUrl}/api/generate`, {
+        const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: 'llama3.2:3b',
-            prompt: prompt,
+            messages: messagesHistory,
             stream: true
           })
         });
@@ -206,42 +212,36 @@
           const { done, value } = await reader.read();
           if (done) break;
 
-          // Append new chunk to current buffer
           streamBuffer += decoder.decode(value, { stream: true });
-
-          // Split buffer on newline
           const lines = streamBuffer.split('\n');
-
-          // Keep the last incomplete string inside streamBuffer for the next loop
           streamBuffer = lines.pop();
 
-          // Process only fully completed lines
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
             try {
               const parsed = JSON.parse(trimmed);
-              if (parsed.response) {
-                fullText += parsed.response;
+              if (parsed.message && parsed.message.content) {
+                fullText += parsed.message.content;
                 botMsgDiv.textContent = fullText;
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
-            } catch (e) {
-              // Ignore partial JSON parse errors safely
-            }
+            } catch (e) {}
           }
         }
 
-        // Parse any remaining line at the end of the stream
         if (streamBuffer.trim()) {
           try {
             const parsed = JSON.parse(streamBuffer.trim());
-            if (parsed.response) {
-              fullText += parsed.response;
+            if (parsed.message && parsed.message.content) {
+              fullText += parsed.message.content;
               botMsgDiv.textContent = fullText;
             }
           } catch (e) {}
         }
+
+        // Save model's complete response to history memory
+        messagesHistory.push({ role: 'assistant', content: fullText });
 
       } catch (err) {
         botMsgDiv.textContent = `Error connecting to server: ${err.message}`;
