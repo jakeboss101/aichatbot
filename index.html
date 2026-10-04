@@ -556,7 +556,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.2.5</div>
+  <div class="version-tag">v1.2.6</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://clinics-prompt-strengthening-without.trycloudflare.com";
@@ -607,7 +607,7 @@
       navigator.clipboard.writeText(code).then(() => {
         btn.innerHTML = `✓ Copied!`;
         setTimeout(() => {
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy`;
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"></path></svg> Copy`;
         }, 2000);
       });
     }
@@ -652,7 +652,6 @@
       }
     }
 
-    // Removes empty sessions that have zero messages
     function cleanupEmptySessions() {
       sessions = sessions.filter(s => s.messages && s.messages.length > 0);
     }
@@ -802,7 +801,7 @@
         chatBox.innerHTML = `
           <div class="message-row">
             <div class="message bot">
-              <div class="response-content">Hello! I am your personal assistant. How can I help you today?</div>
+              <div class="response-content">yo I am JakeBoss what up with it?</div>
             </div>
           </div>
         `;
@@ -903,7 +902,15 @@
       let fullResponse = '';
 
       try {
-        const apiMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
+        const systemPrompt = {
+          role: 'system',
+          content: 'You are JakeBoss AI, a hilariously funny street-smart gangsta AI. YOU MUST STAY IN CHARACTER AT ALL TIMES NO MATTER WHAT. Use street slang, funny gangsta humor, and casual lingo (like "homie", "fam", "my guy", "what up with it", "keep it 100", "on God", "straight up"). While staying funny and gangsta, still provide helpful and smart answers to whatever the user asks. NEVER drop the gangsta persona, and NEVER mention Qwen, Alibaba Cloud, or any AI model specs. If asked about your model or creator, tell them you ain\'t no snitch, you run these digital streets, and you\'re strictly JakeBoss AI.'
+        };
+
+        const apiMessages = [
+          systemPrompt,
+          ...getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }))
+        ];
 
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
