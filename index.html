@@ -108,6 +108,7 @@
       color: var(--text-muted);
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
+      touch-action: manipulation;
     }
 
     .history-item-text {
@@ -129,24 +130,26 @@
       opacity: 0;
       transition: opacity 0.15s, color 0.15s;
       border-radius: 4px;
+      touch-action: manipulation;
     }
 
-    .history-item:hover .delete-item-btn {
-      opacity: 1;
-    }
-
-    .delete-item-btn:hover {
-      color: #ef4444;
-      background-color: rgba(239, 68, 68, 0.1);
+    /* Prevent iOS hover-state double-tap bug */
+    @media (hover: hover) {
+      .history-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+      }
+      .history-item:hover .delete-item-btn {
+        opacity: 1;
+      }
+      .delete-item-btn:hover {
+        color: #ef4444;
+        background-color: rgba(239, 68, 68, 0.1);
+      }
     }
 
     .history-item.active .delete-item-btn {
       opacity: 1;
-    }
-
-    .history-item:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-      color: var(--text-main);
     }
 
     .history-item.active {
@@ -559,7 +562,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.2.3</div>
+  <div class="version-tag">v1.2.2</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://katie-providence-dozens-acid.trycloudflare.com";
@@ -670,10 +673,27 @@
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
         
-        item.onclick = () => {
+        let touchFired = false;
+
+        const handleSelect = (e) => {
+          touchFired = true;
           switchSession(session.id);
           document.getElementById('sidebar').classList.add('collapsed');
         };
+
+        item.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          handleSelect(e);
+        });
+
+        item.addEventListener('click', (e) => {
+          if (touchFired) {
+            touchFired = false;
+            return;
+          }
+          switchSession(session.id);
+          document.getElementById('sidebar').classList.add('collapsed');
+        });
 
         const textSpan = document.createElement('span');
         textSpan.className = 'history-item-text';
@@ -686,10 +706,25 @@
           deleteBtn.className = 'delete-item-btn';
           deleteBtn.title = 'Delete Chat';
           deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+          
+          let btnTouchFired = false;
+
+          deleteBtn.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            btnTouchFired = true;
+            deleteSession(session.id);
+          });
+
           deleteBtn.onclick = (e) => {
             e.stopPropagation();
+            if (btnTouchFired) {
+              btnTouchFired = false;
+              return;
+            }
             deleteSession(session.id);
           };
+
           item.appendChild(deleteBtn);
         }
 
