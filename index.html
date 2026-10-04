@@ -18,7 +18,7 @@
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
       --input-bg: #1e2430;
-      --sidebar-width: 240px;
+      --sidebar-width: 220px;
     }
 
     * {
@@ -101,27 +101,13 @@
       color: var(--text-muted);
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
-      gap: 8px;
-    }
-
-    .history-item-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      gap: 2px;
     }
 
     .history-item-text {
+      flex: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .history-item-tokens {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      opacity: 0.7;
     }
 
     .delete-item-btn {
@@ -136,7 +122,6 @@
       opacity: 0;
       transition: opacity 0.15s, color 0.15s;
       border-radius: 4px;
-      flex-shrink: 0;
     }
 
     .history-item:hover .delete-item-btn {
@@ -265,7 +250,13 @@
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
-    /* Top Right Overall Token Stats Badge */
+    /* Top Right Overall Token Stats Badge & Reset Button */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .token-stats-badge {
       font-size: 0.8rem;
       color: var(--text-muted);
@@ -281,6 +272,23 @@
     .token-stats-badge span {
       color: var(--accent-color);
       font-weight: 600;
+    }
+
+    .reset-tokens-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .reset-tokens-btn:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border-color: #ef4444;
     }
 
     /* Chat Area */
@@ -418,7 +426,7 @@
 
     @media (max-width: 768px) {
       :root {
-        --sidebar-width: 220px;
+        --sidebar-width: 200px;
       }
       .sidebar {
         position: absolute;
@@ -457,9 +465,12 @@
           <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
-      <!-- Top Right Overall Token Stats Badge -->
-      <div class="token-stats-badge">
-        Total Tokens: <span id="total-tokens-display">0</span>
+      <!-- Top Right Overall Token Stats Badge & Reset Button -->
+      <div class="header-right">
+        <div class="token-stats-badge">
+          Total Tokens: <span id="total-tokens-display">0</span>
+        </div>
+        <button class="reset-tokens-btn" onclick="resetTokenCount()" title="Reset Token Count">Reset</button>
       </div>
     </header>
 
@@ -487,7 +498,10 @@
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let currentSessionId = null;
-    let activeController = null; // Used to cancel ongoing generation streams
+    let activeController = null;
+    
+    // Persistent lifetime total tokens counter
+    let lifetimeTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
 
     const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
@@ -508,20 +522,26 @@
       document.getElementById('sidebar').classList.toggle('collapsed');
     }
 
-    function updateTokenStats() {
-      let grandTotalChars = 0;
-      sessions.forEach(session => {
-        session.messages.forEach(m => {
-          grandTotalChars += m.content.length;
-        });
-      });
-      const estimatedTotalTokens = Math.ceil(grandTotalChars / 4);
-      document.getElementById('total-tokens-display').textContent = estimatedTotalTokens.toLocaleString();
+    function updateOverallTokenStats() {
+      document.getElementById('total-tokens-display').textContent = lifetimeTokens.toLocaleString();
+      localStorage.setItem('jakeboss_total_tokens', lifetimeTokens);
+    }
+
+    function addTokensToLifetime(text) {
+      const estimatedTokens = Math.ceil(text.length / 4);
+      lifetimeTokens += estimatedTokens;
+      updateOverallTokenStats();
+    }
+
+    function resetTokenCount() {
+      if (confirm('Are you sure you want to reset your total token count to 0?')) {
+        lifetimeTokens = 0;
+        updateOverallTokenStats();
+      }
     }
 
     function saveSessions() {
       localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
-      updateTokenStats();
       renderSidebar();
     }
 
@@ -532,26 +552,13 @@
       sessions.forEach(session => {
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        item.onclick = () => switchSession(session.id);
-
-        let sessionChars = 0;
-        session.messages.forEach(m => sessionChars += m.content.length);
-        const sessionTokens = Math.ceil(sessionChars / 4);
-
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'history-item-content';
-
+        
         const textSpan = document.createElement('span');
         textSpan.className = 'history-item-text';
         textSpan.textContent = session.title || 'Chat Session';
+        textSpan.onclick = () => switchSession(session.id);
 
-        const tokenSpan = document.createElement('span');
-        tokenSpan.className = 'history-item-tokens';
-        tokenSpan.textContent = `${sessionTokens.toLocaleString()} tokens`;
-
-        contentDiv.appendChild(textSpan);
-        contentDiv.appendChild(tokenSpan);
-        item.appendChild(contentDiv);
+        item.appendChild(textSpan);
 
         if (session.title !== 'New Chat') {
           const deleteBtn = document.createElement('button');
@@ -642,7 +649,7 @@
             </div>
           </div>
         `;
-        updateTokenStats();
+        updateOverallTokenStats();
         return;
       }
 
@@ -669,7 +676,7 @@
       });
 
       chatBox.scrollTop = chatBox.scrollHeight;
-      updateTokenStats();
+      updateOverallTokenStats();
     }
 
     function handleKeyDown(event) {
@@ -699,7 +706,6 @@
 
       if (!prompt) return;
 
-      // If text is currently streaming, abort it so we can start the new message immediately
       if (activeController) {
         activeController.abort();
         activeController = null;
@@ -716,6 +722,7 @@
       }
 
       session.messages.push({ role: 'user', content: prompt });
+      addTokensToLifetime(prompt);
       saveSessions();
 
       // User Message UI
@@ -728,7 +735,6 @@
       inputEl.value = '';
       inputEl.style.height = '28px';
 
-      // Force autoscroll to bottom for new message
       userScrolledUp = false;
       chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -785,7 +791,11 @@
                 if (fullResponse === '') responseContent.textContent = '';
                 const chunk = parsed.message.content;
                 fullResponse += chunk;
-                generatedTokenCount += Math.ceil(chunk.length / 4);
+                const chunkTokens = Math.ceil(chunk.length / 4);
+                generatedTokenCount += chunkTokens;
+                lifetimeTokens += chunkTokens;
+                updateOverallTokenStats();
+
                 responseContent.textContent = fullResponse;
                 
                 if (!userScrolledUp) {
@@ -803,7 +813,11 @@
               if (fullResponse === '') responseContent.textContent = '';
               const chunk = parsed.message.content;
               fullResponse += chunk;
-              generatedTokenCount += Math.ceil(chunk.length / 4);
+              const chunkTokens = Math.ceil(chunk.length / 4);
+              generatedTokenCount += chunkTokens;
+              lifetimeTokens += chunkTokens;
+              updateOverallTokenStats();
+
               responseContent.textContent = fullResponse;
               if (!userScrolledUp) {
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -831,7 +845,6 @@
 
       } catch (err) {
         if (err.name === 'AbortError') {
-          // If aborted by a new message, save whatever text was generated so far
           if (fullResponse.trim()) {
             session.messages.push({
               role: 'assistant',
