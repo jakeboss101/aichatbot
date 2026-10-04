@@ -128,7 +128,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 1; /* Always visible */
+      opacity: 1;
       transition: color 0.15s, background-color 0.15s;
       border-radius: 4px;
       touch-action: manipulation;
@@ -556,7 +556,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.2.4</div>
+  <div class="version-tag">v1.2.5</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://katie-providence-dozens-acid.trycloudflare.com";
@@ -652,6 +652,11 @@
       }
     }
 
+    // Removes empty sessions that have zero messages
+    function cleanupEmptySessions() {
+      sessions = sessions.filter(s => s.messages && s.messages.length > 0);
+    }
+
     function saveSessions() {
       localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
       renderSidebar();
@@ -693,33 +698,30 @@
 
         item.appendChild(textSpan);
 
-        if (session.title !== 'New Chat') {
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'delete-item-btn';
-          deleteBtn.title = 'Delete Chat';
-          deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-          
-          let btnTouchFired = false;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-item-btn';
+        deleteBtn.title = 'Delete Chat';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        
+        let btnTouchFired = false;
 
-          deleteBtn.addEventListener('touchend', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            btnTouchFired = true;
-            deleteSession(session.id);
-          });
+        deleteBtn.addEventListener('touchend', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          btnTouchFired = true;
+          deleteSession(session.id);
+        });
 
-          deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (btnTouchFired) {
-              btnTouchFired = false;
-              return;
-            }
-            deleteSession(session.id);
-          };
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (btnTouchFired) {
+            btnTouchFired = false;
+            return;
+          }
+          deleteSession(session.id);
+        };
 
-          item.appendChild(deleteBtn);
-        }
-
+        item.appendChild(deleteBtn);
         historyList.appendChild(item);
       });
     }
@@ -760,6 +762,8 @@
         activeController.abort();
         activeController = null;
       }
+      cleanupEmptySessions();
+
       const newSession = {
         id: Date.now().toString(),
         title: 'New Chat',
@@ -775,12 +779,17 @@
     }
 
     function switchSession(id) {
+      if (id === currentSessionId) return;
+
       if (activeController) {
         activeController.abort();
         activeController = null;
       }
+      cleanupEmptySessions();
+
       currentSessionId = id;
       userScrolledUp = false;
+      saveSessions();
       renderSidebar();
       renderCurrentChat();
     }
@@ -995,6 +1004,7 @@
       }
     }
 
+    cleanupEmptySessions();
     updateOverallTokenStats();
     if (sessions.length === 0) {
       startNewChat();
