@@ -102,15 +102,49 @@
     }
 
     .history-item {
-      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
       border-radius: 8px;
       font-size: 0.9rem;
       color: var(--text-muted);
       cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .history-item-text {
+      flex: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      transition: background 0.15s, color 0.15s;
+    }
+
+    .delete-item-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      border-radius: 4px;
+    }
+
+    .history-item:hover .delete-item-btn {
+      opacity: 1;
+    }
+
+    .delete-item-btn:hover {
+      color: #ef4444;
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .history-item.active .delete-item-btn {
+      opacity: 1;
     }
 
     .history-item:hover {
@@ -126,11 +160,35 @@
     }
 
     .sidebar-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .delete-all-btn {
+      width: 100%;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .delete-all-btn:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+
+    .footer-brand {
       font-size: 0.8rem;
       color: var(--text-muted);
       text-align: center;
-      padding-top: 8px;
-      border-top: 1px solid var(--border-color);
     }
 
     /* Main Workspace Container */
@@ -389,7 +447,10 @@
       New Chat
     </button>
     <div id="chat-history-list" class="chat-history-list"></div>
-    <div class="sidebar-footer">JakeBoss AI</div>
+    <div class="sidebar-footer">
+      <button class="delete-all-btn" onclick="deleteAllChats()">Delete All Chats</button>
+      <div class="footer-brand">JakeBoss AI</div>
+    </div>
   </aside>
 
   <!-- Main Workspace -->
@@ -462,10 +523,48 @@
       sessions.forEach(session => {
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        item.textContent = session.title || 'Chat Session';
-        item.onclick = () => switchSession(session.id);
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'history-item-text';
+        textSpan.textContent = session.title || 'Chat Session';
+        textSpan.onclick = () => switchSession(session.id);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-item-btn';
+        deleteBtn.title = 'Delete Chat';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteSession(session.id);
+        };
+
+        item.appendChild(textSpan);
+        item.appendChild(deleteBtn);
         historyList.appendChild(item);
       });
+    }
+
+    function deleteSession(id) {
+      sessions = sessions.filter(s => s.id !== id);
+      saveSessions();
+
+      if (sessions.length === 0) {
+        startNewChat();
+      } else if (currentSessionId === id) {
+        currentSessionId = sessions[0].id;
+        renderSidebar();
+        renderCurrentChat();
+      } else {
+        renderSidebar();
+      }
+    }
+
+    function deleteAllChats() {
+      if (confirm('Are you sure you want to delete all chat history?')) {
+        sessions = [];
+        localStorage.removeItem('jakeboss_sessions');
+        startNewChat();
+      }
     }
 
     function startNewChat() {
@@ -480,7 +579,7 @@
       renderSidebar();
       renderCurrentChat();
 
-      // Auto-collapse the sidebar when a new chat is created (especially useful on mobile)
+      // Auto-collapse sidebar on new chat
       document.getElementById('sidebar').classList.add('collapsed');
     }
 
