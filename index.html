@@ -657,13 +657,15 @@
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
         
-        const textSpan = document.createElement('span');
-        textSpan.className = 'history-item-text';
-        textSpan.textContent = session.title || 'Chat Session';
-        textSpan.onclick = () => {
+        // Single click anywhere on the item switches chat and closes sidebar
+        item.onclick = () => {
           switchSession(session.id);
           document.getElementById('sidebar').classList.add('collapsed');
         };
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'history-item-text';
+        textSpan.textContent = session.title || 'Chat Session';
 
         item.appendChild(textSpan);
 
@@ -673,7 +675,7 @@
           deleteBtn.title = 'Delete Chat';
           deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
           deleteBtn.onclick = (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Prevents triggering item click when deleting
             deleteSession(session.id);
           };
           item.appendChild(deleteBtn);
