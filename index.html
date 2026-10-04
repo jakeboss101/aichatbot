@@ -18,7 +18,7 @@
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
       --input-bg: #1e2430;
-      --sidebar-width: 220px;
+      --sidebar-width: 240px;
     }
 
     * {
@@ -101,13 +101,27 @@
       color: var(--text-muted);
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
+      gap: 8px;
+    }
+
+    .history-item-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      gap: 2px;
     }
 
     .history-item-text {
-      flex: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .history-item-tokens {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      opacity: 0.7;
     }
 
     .delete-item-btn {
@@ -122,6 +136,7 @@
       opacity: 0;
       transition: opacity 0.15s, color 0.15s;
       border-radius: 4px;
+      flex-shrink: 0;
     }
 
     .history-item:hover .delete-item-btn {
@@ -250,7 +265,7 @@
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
-    /* Top Right Token Stats Badge */
+    /* Top Right Overall Token Stats Badge */
     .token-stats-badge {
       font-size: 0.8rem;
       color: var(--text-muted);
@@ -403,7 +418,7 @@
 
     @media (max-width: 768px) {
       :root {
-        --sidebar-width: 200px;
+        --sidebar-width: 220px;
       }
       .sidebar {
         position: absolute;
@@ -442,7 +457,7 @@
           <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
-      <!-- Top Right Token Stats -->
+      <!-- Top Right Overall Token Stats Badge -->
       <div class="token-stats-badge">
         Total Tokens: <span id="total-tokens-display">0</span>
       </div>
@@ -472,6 +487,7 @@
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let currentSessionId = null;
+    let activeController = null; // Used to cancel ongoing generation streams
 
     const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
@@ -492,23 +508,21 @@
       document.getElementById('sidebar').classList.toggle('collapsed');
     }
 
-    fnEstimateTokens = (text) => Math.ceil(text.length / 4);
-
-    function updateHeaderTokenStats() {
-      const session = sessions.find(s => s.id === currentSessionId);
-      if (!session) {
-        document.getElementById('total-tokens-display').textContent = '0';
-        return;
-      }
-      let totalChars = 0;
-      session.messages.forEach(m => totalChars += m.content.length);
-      const estimatedTokens = Math.ceil(totalChars / 4);
-      document.getElementById('total-tokens-display').textContent = estimatedTokens.toLocaleString();
+    function updateTokenStats() {
+      let grandTotalChars = 0;
+      sessions.forEach(session => {
+        session.messages.forEach(m => {
+          grandTotalChars += m.content.length;
+        });
+      });
+      const estimatedTotalTokens = Math.ceil(grandTotalChars / 4);
+      document.getElementById('total-tokens-display').textContent = estimatedTotalTokens.toLocaleString();
     }
 
     function saveSessions() {
       localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
-      updateHeaderTokenStats();
+      updateTokenStats();
+      renderSidebar();
     }
 
     function renderSidebar() {
@@ -518,13 +532,26 @@
       sessions.forEach(session => {
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        
+        item.onclick = () => switchSession(session.id);
+
+        let sessionChars = 0;
+        session.messages.forEach(m => sessionChars += m.content.length);
+        const sessionTokens = Math.ceil(sessionChars / 4);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'history-item-content';
+
         const textSpan = document.createElement('span');
         textSpan.className = 'history-item-text';
         textSpan.textContent = session.title || 'Chat Session';
-        textSpan.onclick = () => switchSession(session.id);
 
-        item.appendChild(textSpan);
+        const tokenSpan = document.createElement('span');
+        tokenSpan.className = 'history-item-tokens';
+        tokenSpan.textContent = `${sessionTokens.toLocaleString()} tokens`;
+
+        contentDiv.appendChild(textSpan);
+        contentDiv.appendChild(tokenSpan);
+        item.appendChild(contentDiv);
 
         if (session.title !== 'New Chat') {
           const deleteBtn = document.createElement('button');
@@ -543,6 +570,10 @@
     }
 
     function deleteSession(id) {
+      if (activeController) {
+        activeController.abort();
+        activeController = null;
+      }
       sessions = sessions.filter(s => s.id !== id);
       saveSessions();
 
@@ -559,6 +590,10 @@
 
     function deleteAllChats() {
       if (confirm('Are you sure you want to delete all chat history?')) {
+        if (activeController) {
+          activeController.abort();
+          activeController = null;
+        }
         sessions = [];
         localStorage.removeItem('jakeboss_sessions');
         startNewChat();
@@ -566,6 +601,10 @@
     }
 
     function startNewChat() {
+      if (activeController) {
+        activeController.abort();
+        activeController = null;
+      }
       const newSession = {
         id: Date.now().toString(),
         title: 'New Chat',
@@ -581,11 +620,14 @@
     }
 
     function switchSession(id) {
+      if (activeController) {
+        activeController.abort();
+        activeController = null;
+      }
       currentSessionId = id;
       userScrolledUp = false;
       renderSidebar();
       renderCurrentChat();
-      updateHeaderTokenStats();
     }
 
     function renderCurrentChat() {
@@ -600,11 +642,11 @@
             </div>
           </div>
         `;
-        updateHeaderTokenStats();
+        updateTokenStats();
         return;
       }
 
-      session.messages.forEach((msg, index) => {
+      session.messages.forEach((msg) => {
         const row = document.createElement('div');
         row.className = 'message-row';
         if (msg.role === 'user') {
@@ -612,7 +654,6 @@
           row.querySelector('.message').textContent = msg.content;
         } else {
           let speedTagHtml = '';
-          // If message object stored metadata with token speed, render it
           if (msg.speed) {
             speedTagHtml = `<div class="token-speed-tag">⚡ ${msg.speed}</div>`;
           }
@@ -628,7 +669,7 @@
       });
 
       chatBox.scrollTop = chatBox.scrollHeight;
-      updateHeaderTokenStats();
+      updateTokenStats();
     }
 
     function handleKeyDown(event) {
@@ -654,10 +695,15 @@
 
     async function sendMessage() {
       const inputEl = document.getElementById('user-input');
-      const sendBtn = document.getElementById('send-btn');
       const prompt = inputEl.value.trim();
 
       if (!prompt) return;
+
+      // If text is currently streaming, abort it so we can start the new message immediately
+      if (activeController) {
+        activeController.abort();
+        activeController = null;
+      }
 
       if (!currentSessionId) {
         startNewChat();
@@ -671,7 +717,6 @@
 
       session.messages.push({ role: 'user', content: prompt });
       saveSessions();
-      renderSidebar();
 
       // User Message UI
       const userRow = document.createElement('div');
@@ -682,9 +727,8 @@
 
       inputEl.value = '';
       inputEl.style.height = '28px';
-      inputEl.disabled = true;
-      sendBtn.disabled = true;
 
+      // Force autoscroll to bottom for new message
       userScrolledUp = false;
       chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -699,8 +743,10 @@
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
+      activeController = new AbortController();
       const startTime = performance.now();
       let generatedTokenCount = 0;
+      let fullResponse = '';
 
       try {
         const apiMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
@@ -712,14 +758,14 @@
             model: modelName,
             messages: apiMessages,
             stream: true
-          })
+          }),
+          signal: activeController.signal
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let fullResponse = '';
         let streamBuffer = '';
 
         while (true) {
@@ -771,7 +817,6 @@
         const tokensPerSec = durationSec > 0 ? (generatedTokenCount / durationSec).toFixed(1) : '0.0';
         const speedText = `${tokensPerSec} tok/s`;
 
-        // Append speed badge under bot message UI
         const speedTag = document.createElement('div');
         speedTag.className = 'token-speed-tag';
         speedTag.textContent = `⚡ ${speedText}`;
@@ -785,12 +830,26 @@
         saveSessions();
 
       } catch (err) {
-        responseContent.textContent = `Connection error: ${err.message}. Please check your TUNNEL_BASE_URL configuration.`;
-        responseContent.style.color = '#ef4444';
+        if (err.name === 'AbortError') {
+          // If aborted by a new message, save whatever text was generated so far
+          if (fullResponse.trim()) {
+            session.messages.push({
+              role: 'assistant',
+              content: fullResponse,
+              speed: 'aborted'
+            });
+            saveSessions();
+          } else {
+            botRow.remove();
+          }
+        } else {
+          responseContent.textContent = `Connection error: ${err.message}. Please check your TUNNEL_BASE_URL configuration.`;
+          responseContent.style.color = '#ef4444';
+        }
       } finally {
-        inputEl.disabled = false;
-        sendBtn.disabled = false;
-        inputEl.focus();
+        if (activeController && activeController.signal.aborted === false) {
+          activeController = null;
+        }
       }
     }
 
