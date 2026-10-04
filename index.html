@@ -559,7 +559,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.2.1</div>
+  <div class="version-tag">v1.2.0</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://katie-providence-dozens-acid.trycloudflare.com";
@@ -574,10 +574,11 @@
     const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
 
-    // Custom Markdown Renderer to generate stylized Code Boxes
+    // Custom Markdown Renderer (Supports latest Marked.js token object structure)
     const renderer = new marked.Renderer();
-    renderer.code = function(code, lang) {
-      const language = lang || 'plaintext';
+    renderer.code = function(token) {
+      const code = (typeof token === 'object' ? token.text : token) || '';
+      const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
       const encodedCode = encodeURIComponent(code);
       return `
         <div class="code-block-wrapper">
@@ -657,7 +658,7 @@
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
         
-        // Single click anywhere on the item switches chat and closes sidebar
+        // Single click anywhere on the chat item switches session & closes sidebar
         item.onclick = () => {
           switchSession(session.id);
           document.getElementById('sidebar').classList.add('collapsed');
