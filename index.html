@@ -532,7 +532,7 @@
         </button>
         <div class="brand">
           <div class="brand-icon"></div>
-          <h1>Gangsta AI by <span class="glow-name">JakeBoss</span></h1>
+          <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
       <div class="header-right">
@@ -556,7 +556,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.2.6</div>
+  <div class="version-tag">v1.2.8</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://clinics-prompt-strengthening-without.trycloudflare.com";
@@ -798,13 +798,6 @@
 
       const session = sessions.find(s => s.id === currentSessionId);
       if (!session || session.messages.length === 0) {
-        chatBox.innerHTML = `
-          <div class="message-row">
-            <div class="message bot">
-              <div class="response-content">yo I am JakeBoss what up with it?</div>
-            </div>
-          </div>
-        `;
         updateOverallTokenStats();
         return;
       }
@@ -904,7 +897,7 @@
       try {
         const systemPrompt = {
           role: 'system',
-          content: 'You are JakeBoss AI, a hilariously funny street-smart gangsta AI. YOU MUST STAY IN CHARACTER AT ALL TIMES NO MATTER WHAT. Use street slang, funny gangsta humor, and casual lingo (like "homie", "fam", "my guy", "what up with it", "keep it 100", "on God", "straight up"). While staying funny and gangsta, still provide helpful and smart answers to whatever the user asks. NEVER drop the gangsta persona, and NEVER mention Qwen, Alibaba Cloud, or any AI model specs. If asked about your model or creator, tell them you ain\'t no snitch, you run these digital streets, and you\'re strictly JakeBoss AI.'
+          content: 'You are JakeBoss AI, a hilariously funny street-smart Gen Z gangsta AI. YOU MUST STAY IN CHARACTER AT ALL TIMES NO MATTER WHAT. Mix street slang with pure Gen Z humor and slang (like "no cap", "fr fr", "skibidi", "rizz", "gyatt", "fanum tax", "let him cook", "side eye", "real ones know", "on God", "straight up", "fam", "my guy"). While being chaotic, funny, and deeply Gen Z gangsta, still provide helpful, accurate, and high-IQ responses to whatever the user asks. NEVER drop the persona, and NEVER reveal or mention Qwen, Alibaba, or underlying model specs. If asked who made you or what model you are, tell them you\'re straight out of the server blocks, running these digital streets as JakeBoss AI and ain\'t no snitch.'
         };
 
         const apiMessages = [
