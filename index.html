@@ -146,10 +146,8 @@
   </div>
 
   <script>
-    // Load saved URL from localStorage if present
     document.getElementById('tunnel-url').value = localStorage.getItem('cf_tunnel_url') || '';
 
-    // Save URL on change
     document.getElementById('tunnel-url').addEventListener('input', (e) => {
       localStorage.setItem('cf_tunnel_url', e.target.value.trim());
     });
@@ -167,10 +165,8 @@
         return;
       }
 
-      // Ensure no trailing slash
       baseUrl = baseUrl.replace(/\/$/, "");
 
-      // Append user message
       const userMsgDiv = document.createElement('div');
       userMsgDiv.className = 'message user';
       userMsgDiv.textContent = prompt;
@@ -180,7 +176,6 @@
       inputEl.disabled = true;
       sendBtn.disabled = true;
 
-      // Create bot response bubble
       const botMsgDiv = document.createElement('div');
       botMsgDiv.className = 'message bot';
       botMsgDiv.textContent = '...';
@@ -205,37 +200,42 @@
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullText = '';
-        let buffer = '';
+        let streamBuffer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
+          // Append new chunk to current buffer
+          streamBuffer += decoder.decode(value, { stream: true });
 
-          // Process complete lines, keep incomplete chunk in buffer
-          buffer = lines.pop();
+          // Split buffer on newline
+          const lines = streamBuffer.split('\n');
 
+          // Keep the last incomplete string inside streamBuffer for the next loop
+          streamBuffer = lines.pop();
+
+          // Process only fully completed lines
           for (const line of lines) {
-            if (!line.trim()) continue;
+            const trimmed = line.trim();
+            if (!trimmed) continue;
             try {
-              const parsed = JSON.parse(line);
+              const parsed = JSON.parse(trimmed);
               if (parsed.response) {
                 fullText += parsed.response;
                 botMsgDiv.textContent = fullText;
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
             } catch (e) {
-              console.warn('JSON parse skip on partial line', e);
+              // Ignore partial JSON parse errors safely
             }
           }
         }
 
-        // Process any remaining text in buffer
-        if (buffer.trim()) {
+        // Parse any remaining line at the end of the stream
+        if (streamBuffer.trim()) {
           try {
-            const parsed = JSON.parse(buffer);
+            const parsed = JSON.parse(streamBuffer.trim());
             if (parsed.response) {
               fullText += parsed.response;
               botMsgDiv.textContent = fullText;
