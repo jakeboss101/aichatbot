@@ -506,6 +506,13 @@
     const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
 
+    // Helper function to force auto-scrolling reliably
+    function scrollToBottom() {
+      requestAnimationFrame(() => {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+    }
+
     chatBox.addEventListener('scroll', () => {
       const threshold = 50;
       const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight <= threshold;
@@ -675,7 +682,7 @@
         chatBox.appendChild(row);
       });
 
-      chatBox.scrollTop = chatBox.scrollHeight;
+      scrollToBottom();
       updateOverallTokenStats();
     }
 
@@ -735,9 +742,6 @@
       inputEl.value = '';
       inputEl.style.height = '28px';
 
-      userScrolledUp = false;
-      chatBox.scrollTop = chatBox.scrollHeight;
-
       // Bot Message Shell
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
@@ -748,6 +752,10 @@
       `;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
+
+      // Reset scroll tracking and force scroll to bottom
+      userScrolledUp = false;
+      scrollToBottom();
 
       activeController = new AbortController();
       const startTime = performance.now();
@@ -799,7 +807,7 @@
                 responseContent.textContent = fullResponse;
                 
                 if (!userScrolledUp) {
-                  chatBox.scrollTop = chatBox.scrollHeight;
+                  scrollToBottom();
                 }
               }
             } catch (e) {}
@@ -820,7 +828,7 @@
 
               responseContent.textContent = fullResponse;
               if (!userScrolledUp) {
-                chatBox.scrollTop = chatBox.scrollHeight;
+                scrollToBottom();
               }
             }
           } catch (e) {}
