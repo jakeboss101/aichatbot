@@ -479,6 +479,9 @@
       saveSessions();
       renderSidebar();
       renderCurrentChat();
+
+      // Auto-collapse the sidebar when a new chat is created (especially useful on mobile)
+      document.getElementById('sidebar').classList.add('collapsed');
     }
 
     function switchSession(id) {
