@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Local M2 LLM Chat</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+    #chat-box { flex: 1; overflow-y: auto; padding: 10px; background: #1e293b; border-radius: 8px; margin-bottom: 10px; }
+    .message { margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; max-width: 80%; line-height: 1.5; white-space: pre-wrap; }
+    .user { background: #2563eb; align-self: flex-end; margin-left: auto; }
+    .bot { background: #334155; align-self: flex-start; }
+    .controls { display: flex; gap: 8px; margin-bottom: 10px; }
+    input, button { padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
+    input[type="text"] { flex: 1; }
+    button { background: #2563eb; cursor: pointer; font-weight: bold; border: none; }
+    button:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+
+  <div class="controls">
+    <input type="text" id="tunnel-url" placeholder="Paste Cloudflare URL (e.g., https://...trycloudflare.com)" style="flex: 2;">
+    <input type="text" id="model-name" value="llama3.2:3b" style="flex: 1;">
+  </div>
+
+  <div id="chat-box"></div>
+
+  <div class="controls">
+    <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    async function sendMessage() {
+      const urlInput = document.getElementById('tunnel-url').value.trim().replace(/\/$/, "");
+      const model = document.getElementById('model-name').value.trim();
+      const inputEl = document.getElementById('user-input');
+      const chatBox = document.getElementById('chat-box');
+
+      if (!urlInput) { alert("Please provide your Cloudflare Tunnel URL!"); return; }
+      if (!inputEl.value.trim()) return;
+
+      const userText = inputEl.value;
+      inputEl.value = '';
+
+      // Append User Message
+      chatBox.innerHTML += `<div class="message user">${escapeHtml(userText)}</div>`;
+      
+      // Append Bot Message Shell
+      const botMsgEl = document.createElement('div');
+      botMsgEl.className = 'message bot';
+      botMsgEl.textContent = 'Thinking...';
+      chatBox.appendChild(botMsgEl);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const response = await fetch(`${urlInput}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: model, prompt: userText, stream: true })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        botMsgEl.textContent = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n').filter(Boolean);
+          
+          for (const line of lines) {
+            const parsed = JSON.parse(line);
+            if (parsed.response) {
+              botMsgEl.textContent += parsed.response;
+              chatBox.scrollTop = chatBox.scrollHeight;
+            }
+          }
+        }
+      } catch (err) {
+        botMsgEl.textContent = 'Error connecting to local server: ' + err.message;
+      }
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
