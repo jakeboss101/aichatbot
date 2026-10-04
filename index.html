@@ -3,90 +3,255 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Local M2 LLM Chat</title>
+  <title>Local LLM Chat</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
-    #chat-box { flex: 1; overflow-y: auto; padding: 10px; background: #1e293b; border-radius: 8px; margin-bottom: 10px; }
-    .message { margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; max-width: 80%; line-height: 1.5; white-space: pre-wrap; }
-    .user { background: #2563eb; align-self: flex-end; margin-left: auto; }
-    .bot { background: #334155; align-self: flex-start; }
-    .controls { display: flex; gap: 8px; margin-bottom: 10px; }
-    input, button { padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
-    input[type="text"] { flex: 1; }
-    button { background: #2563eb; cursor: pointer; font-weight: bold; border: none; }
-    button:hover { background: #1d4ed8; }
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --user-msg: #2563eb;
+      --bot-msg: #334155;
+      --text-color: #f8fafc;
+      --input-bg: #0f172a;
+      --border-color: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    header {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .config-bar {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    #tunnel-url {
+      flex: 1;
+    }
+
+    #chat-box {
+      flex: 1;
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: var(--user-msg);
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background-color: var(--bot-msg);
+      border-bottom-left-radius: 2px;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 8px;
+    }
+
+    #user-input {
+      flex: 1;
+    }
+
+    button {
+      background-color: var(--user-msg);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #1d4ed8;
+    }
+
+    button:disabled {
+      background-color: var(--border-color);
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
 
-  <div class="controls">
-    <input type="text" id="tunnel-url" placeholder="Paste Cloudflare URL (e.g., https://...trycloudflare.com)" style="flex: 2;">
-    <input type="text" id="model-name" value="llama3.2:3b" style="flex: 1;">
+  <header>
+    <h1>MacBook Air M2 — Local AI Chat</h1>
+    <div class="config-bar">
+      <input type="text" id="tunnel-url" placeholder="https://your-tunnel.trycloudflare.com" />
+    </div>
+  </header>
+
+  <div id="chat-box">
+    <div class="message bot">Hello! Paste your Cloudflare Tunnel URL at the top and ask me anything.</div>
   </div>
 
-  <div id="chat-box"></div>
-
-  <div class="controls">
-    <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
-    <button onclick="sendMessage()">Send</button>
+  <div class="input-area">
+    <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key === 'Enter') sendMessage()" />
+    <button id="send-btn" onclick="sendMessage()">Send</button>
   </div>
 
   <script>
+    // Load saved URL from localStorage if present
+    document.getElementById('tunnel-url').value = localStorage.getItem('cf_tunnel_url') || '';
+
+    // Save URL on change
+    document.getElementById('tunnel-url').addEventListener('input', (e) => {
+      localStorage.setItem('cf_tunnel_url', e.target.value.trim());
+    });
+
     async function sendMessage() {
-      const urlInput = document.getElementById('tunnel-url').value.trim().replace(/\/$/, "");
-      const model = document.getElementById('model-name').value.trim();
+      let baseUrl = document.getElementById('tunnel-url').value.trim();
       const inputEl = document.getElementById('user-input');
+      const sendBtn = document.getElementById('send-btn');
       const chatBox = document.getElementById('chat-box');
+      const prompt = inputEl.value.trim();
 
-      if (!urlInput) { alert("Please provide your Cloudflare Tunnel URL!"); return; }
-      if (!inputEl.value.trim()) return;
+      if (!prompt) return;
+      if (!baseUrl) {
+        alert('Please enter your Cloudflare Tunnel URL in the top field.');
+        return;
+      }
 
-      const userText = inputEl.value;
+      // Ensure no trailing slash
+      baseUrl = baseUrl.replace(/\/$/, "");
+
+      // Append user message
+      const userMsgDiv = document.createElement('div');
+      userMsgDiv.className = 'message user';
+      userMsgDiv.textContent = prompt;
+      chatBox.appendChild(userMsgDiv);
+
       inputEl.value = '';
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
 
-      // Append User Message
-      chatBox.innerHTML += `<div class="message user">${escapeHtml(userText)}</div>`;
-      
-      // Append Bot Message Shell
-      const botMsgEl = document.createElement('div');
-      botMsgEl.className = 'message bot';
-      botMsgEl.textContent = 'Thinking...';
-      chatBox.appendChild(botMsgEl);
+      // Create bot response bubble
+      const botMsgDiv = document.createElement('div');
+      botMsgDiv.className = 'message bot';
+      botMsgDiv.textContent = '...';
+      chatBox.appendChild(botMsgDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
 
       try {
-        const response = await fetch(`${urlInput}/api/generate`, {
+        const response = await fetch(`${baseUrl}/api/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: model, prompt: userText, stream: true })
+          body: JSON.stringify({
+            model: 'llama3.2:3b',
+            prompt: prompt,
+            stream: true
+          })
         });
+
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}`);
+        }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        botMsgEl.textContent = '';
+        let fullText = '';
+        let buffer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n').filter(Boolean);
-          
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+
+          // Process complete lines, keep incomplete chunk in buffer
+          buffer = lines.pop();
+
           for (const line of lines) {
-            const parsed = JSON.parse(line);
-            if (parsed.response) {
-              botMsgEl.textContent += parsed.response;
-              chatBox.scrollTop = chatBox.scrollHeight;
+            if (!line.trim()) continue;
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.response) {
+                fullText += parsed.response;
+                botMsgDiv.textContent = fullText;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+            } catch (e) {
+              console.warn('JSON parse skip on partial line', e);
             }
           }
         }
-      } catch (err) {
-        botMsgEl.textContent = 'Error connecting to local server: ' + err.message;
-      }
-    }
 
-    function escapeHtml(text) {
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        // Process any remaining text in buffer
+        if (buffer.trim()) {
+          try {
+            const parsed = JSON.parse(buffer);
+            if (parsed.response) {
+              fullText += parsed.response;
+              botMsgDiv.textContent = fullText;
+            }
+          } catch (e) {}
+        }
+
+      } catch (err) {
+        botMsgDiv.textContent = `Error connecting to server: ${err.message}`;
+        botMsgDiv.style.backgroundColor = '#991b1b';
+      } finally {
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
     }
   </script>
 </body>
