@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>AI Workspace</title>
+  <title>JakeBoss AI Assistant</title>
   <style>
     :root {
       --bg-color: #0e1117;
@@ -18,7 +18,6 @@
       --text-muted: #9ca3af;
       --input-bg: #1e2430;
       --radius-lg: 18px;
-      --radius-sm: 10px;
     }
 
     * {
@@ -33,16 +32,79 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       display: flex;
-      justify-content: center;
       height: 100vh;
-      height: 100dvh; /* Dynamic viewport height for iOS Safari */
+      height: 100dvh;
       overflow: hidden;
     }
 
-    /* Main Container with Boundary Outer Shell */
+    /* Sidebar Drawer */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100%;
+      background-color: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      z-index: 100;
+      transition: left 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+    }
+
+    .sidebar.open {
+      left: 0;
+    }
+
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 90;
+      display: none;
+    }
+
+    .sidebar-overlay.active {
+      display: block;
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      background-color: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .new-chat-btn:active {
+      transform: scale(0.98);
+    }
+
+    .sidebar-info {
+      margin-top: auto;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Main Container */
     .app-container {
       width: 100%;
       max-width: 850px;
+      margin: 0 auto;
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -57,13 +119,23 @@
     header {
       padding: 14px 20px;
       border-bottom: 1px solid var(--border-color);
-      background-color: rgba(14, 17, 23, 0.8);
+      background-color: rgba(14, 17, 23, 0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 10;
+    }
+
+    .menu-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
     }
 
     .brand {
@@ -77,26 +149,22 @@
       height: 12px;
       border-radius: 50%;
       background: linear-gradient(135deg, #38bdf8, #818cf8);
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
     }
 
     h1 {
-      font-size: 1rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
+      font-size: 1.1rem;
+      font-weight: 700;
       color: var(--text-main);
+      letter-spacing: -0.01em;
     }
 
-    .status-badge {
-      font-size: 0.75rem;
-      color: #4ade80;
-      background: rgba(74, 222, 128, 0.1);
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid rgba(74, 222, 128, 0.2);
+    .glow-name {
+      color: var(--accent-color);
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
-    /* Chat Scroll Area */
+    /* Chat Area */
     #chat-box {
       flex: 1;
       overflow-y: auto;
@@ -107,7 +175,6 @@
       scroll-behavior: smooth;
     }
 
-    /* Message Bubbles */
     .message-row {
       display: flex;
       flex-direction: column;
@@ -115,9 +182,9 @@
     }
 
     .message {
-      max-width: 85%;
-      padding: 14px 18px;
-      font-size: 0.95rem;
+      max-width: 88%;
+      padding: 16px 20px;
+      font-size: 1.05rem; /* Larger font size for easy reading */
       line-height: 1.6;
       word-break: break-word;
       white-space: pre-wrap;
@@ -149,11 +216,11 @@
     .input-card {
       background-color: var(--input-bg);
       border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 8px 8px 8px 16px;
+      border-radius: 28px;
+      padding: 10px 12px 10px 20px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
@@ -168,10 +235,10 @@
       border: none;
       outline: none;
       color: var(--text-main);
-      font-size: 0.95rem;
+      font-size: 1.05rem;
       resize: none;
       max-height: 120px;
-      height: 24px;
+      height: 28px;
       line-height: 1.4;
     }
 
@@ -180,8 +247,8 @@
     }
 
     .send-btn {
-      width: 36px;
-      height: 36px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       border: none;
       background: var(--accent-color);
@@ -206,12 +273,11 @@
     }
 
     .send-btn svg {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       fill: currentColor;
     }
 
-    /* Responsive Boundaries */
     @media (max-width: 850px) {
       .app-container {
         border-left: none;
@@ -222,18 +288,36 @@
 </head>
 <body>
 
+  <!-- Slide-out Sidebar -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <aside id="sidebar" class="sidebar">
+    <button class="new-chat-btn" onclick="startNewChat()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Start New Chat
+    </button>
+    <div class="sidebar-info">
+      <p>Click <strong>Start New Chat</strong> if the conversation gets slow or long.</p>
+    </div>
+  </aside>
+
+  <!-- Main App Shell -->
   <div class="app-container">
     <header>
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open Menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+
       <div class="brand">
         <div class="brand-icon"></div>
-        <h1>Qwen3.5 Uncensored</h1>
+        <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
       </div>
-      <div class="status-badge">Online</div>
+
+      <div style="width: 24px;"></div> <!-- Spacer balance for menu icon -->
     </header>
 
     <div id="chat-box">
       <div class="message-row">
-        <div class="message bot">Hello! How can I assist you today?</div>
+        <div class="message bot">Hello! I am your personal assistant. How can I help you today?</div>
       </div>
     </div>
 
@@ -248,7 +332,6 @@
   </div>
 
   <script>
-    // Configured backend URL and model string
     const baseUrl = "https://idol-font-approach-adams.trycloudflare.com";
     const modelName = "hf.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive:Q4_K_M";
 
@@ -259,6 +342,22 @@
       this.style.height = 'auto';
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-overlay').classList.toggle('active');
+    }
+
+    function startNewChat() {
+      messagesHistory = [];
+      const chatBox = document.getElementById('chat-box');
+      chatBox.innerHTML = `
+        <div class="message-row">
+          <div class="message bot">Hello! I am your personal assistant. How can I help you today?</div>
+        </div>
+      `;
+      toggleSidebar();
+    }
 
     function handleKeyDown(event) {
       if (event.key === 'Enter' && !event.shiftKey) {
@@ -275,10 +374,8 @@
 
       if (!prompt) return;
 
-      // Add user prompt to state
       messagesHistory.push({ role: 'user', content: prompt });
 
-      // Render user message UI
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
@@ -286,11 +383,10 @@
       chatBox.appendChild(userRow);
 
       inputEl.value = '';
-      inputEl.style.height = '24px';
+      inputEl.style.height = '28px';
       inputEl.disabled = true;
       sendBtn.disabled = true;
 
-      // Render bot container UI
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
       botRow.innerHTML = `<div class="message bot">...</div>`;
