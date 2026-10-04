@@ -100,7 +100,7 @@
       line-height: 1.5;
     }
 
-    /* Main Container */
+    /* Main Container Shell */
     .app-container {
       width: 100%;
       max-width: 850px;
@@ -184,7 +184,7 @@
     .message {
       max-width: 88%;
       padding: 16px 20px;
-      font-size: 1.05rem; /* Larger font size for easy reading */
+      font-size: 1.05rem;
       line-height: 1.6;
       word-break: break-word;
       white-space: pre-wrap;
@@ -312,7 +312,7 @@
         <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
       </div>
 
-      <div style="width: 24px;"></div> <!-- Spacer balance for menu icon -->
+      <div style="width: 24px;"></div>
     </header>
 
     <div id="chat-box">
@@ -427,6 +427,15 @@
             if (!trimmed) continue;
             try {
               const parsed = JSON.parse(trimmed);
+              
+              // Handle reasoning/thinking stream tokens
+              if (parsed.message && parsed.message.thinking) {
+                fullText += parsed.message.thinking;
+                botMsgDiv.textContent = fullText;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+
+              // Handle main response content stream tokens
               if (parsed.message && parsed.message.content) {
                 fullText += parsed.message.content;
                 botMsgDiv.textContent = fullText;
@@ -439,8 +448,8 @@
         if (streamBuffer.trim()) {
           try {
             const parsed = JSON.parse(streamBuffer.trim());
-            if (parsed.message && parsed.message.content) {
-              fullText += parsed.message.content;
+            if (parsed.message && (parsed.message.content || parsed.message.thinking)) {
+              fullText += parsed.message.content || parsed.message.thinking;
               botMsgDiv.textContent = fullText;
             }
           } catch (e) {}
