@@ -559,7 +559,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.2.2</div>
+  <div class="version-tag">v1.2.3</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://katie-providence-dozens-acid.trycloudflare.com";
@@ -574,12 +574,24 @@
     const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
 
-    // Custom Markdown Renderer (Supports latest Marked.js token object structure)
+    // Helper to safely escape raw HTML strings inside code blocks
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Custom Markdown Renderer
     const renderer = new marked.Renderer();
     renderer.code = function(token) {
       const code = (typeof token === 'object' ? token.text : token) || '';
       const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
       const encodedCode = encodeURIComponent(code);
+      const safeCode = escapeHtml(code);
+
       return `
         <div class="code-block-wrapper">
           <div class="code-block-header">
@@ -589,7 +601,7 @@
               Copy
             </button>
           </div>
-          <pre><code class="language-${language}">${code}</code></pre>
+          <pre><code class="language-${language}">${safeCode}</code></pre>
         </div>
       `;
     };
@@ -658,7 +670,6 @@
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
         
-        // Single click anywhere on the chat item switches session & closes sidebar
         item.onclick = () => {
           switchSession(session.id);
           document.getElementById('sidebar').classList.add('collapsed');
@@ -676,7 +687,7 @@
           deleteBtn.title = 'Delete Chat';
           deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
           deleteBtn.onclick = (e) => {
-            e.stopPropagation(); // Prevents triggering item click when deleting
+            e.stopPropagation();
             deleteSession(session.id);
           };
           item.appendChild(deleteBtn);
