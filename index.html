@@ -6,6 +6,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JakeBoss AI Assistant</title>
+  
+  <!-- ========================================== -->
+  <!-- ⚙️ QUICK SETTINGS: EDIT YOUR TUNNEL URL HERE -->
+  <!-- ========================================== -->
+  <script>
+    // You can edit this directly or change it from the settings panel in the app header!
+    if (!localStorage.getItem('jakeboss_base_url')) {
+      localStorage.setItem('jakeboss_base_url', 'https://katie-providence-dozens-acid.trycloudflare.com');
+    }
+  </script>
+
   <style>
     :root {
       --bg-color: #0e1117;
@@ -135,7 +146,7 @@
     }
 
     header {
-      padding: 14px 20px;
+      padding: 12px 20px;
       border-bottom: 1px solid var(--border-color);
       background-color: rgba(14, 17, 23, 0.85);
       backdrop-filter: blur(12px);
@@ -144,6 +155,8 @@
       align-items: center;
       justify-content: space-between;
       z-index: 10;
+      gap: 15px;
+      flex-wrap: wrap;
     }
 
     .header-left {
@@ -187,6 +200,48 @@
     .glow-name {
       color: var(--accent-color);
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    /* Tunnel URL Configuration Box in Header */
+    .url-config-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+
+    .url-config-box label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .url-config-box input {
+      background: transparent;
+      border: none;
+      color: var(--accent-color);
+      font-size: 0.85rem;
+      outline: none;
+      width: 240px;
+    }
+
+    .url-config-box button {
+      background: var(--border-color);
+      color: var(--text-main);
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .url-config-box button:hover {
+      background: var(--accent-color);
+      color: #0f172a;
     }
 
     /* Chat Area */
@@ -319,6 +374,9 @@
       .sidebar:not(.collapsed) {
         box-shadow: 5px 0 25px rgba(0,0,0,0.5);
       }
+      .url-config-box input {
+        width: 160px;
+      }
     }
   </style>
 </head>
@@ -346,6 +404,13 @@
           <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
+      
+      <!-- Editable Tunnel URL Box -->
+      <div class="url-config-box">
+        <label for="tunnel-url-input">Tunnel URL:</label>
+        <input type="text" id="tunnel-url-input" />
+        <button onclick="saveTunnelUrl()">Save</button>
+      </div>
     </header>
 
     <div id="chat-box"></div>
@@ -361,11 +426,20 @@
   </div>
 
   <script>
-    const baseUrl = "https://idol-font-approach-adams.trycloudflare.com";
     const modelName = "huihui_ai/qwen2.5-abliterate:7b";
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let currentSessionId = null;
+
+    // Initialize Tunnel URL input box value
+    const tunnelInput = document.getElementById('tunnel-url-input');
+    tunnelInput.value = localStorage.getItem('jakeboss_base_url') || 'https://katie-providence-dozens-acid.trycloudflare.com';
+
+    function saveTunnelUrl() {
+      const newUrl = tunnelInput.value.trim().replace(/\/$/, ''); // remove trailing slash if any
+      localStorage.setItem('jakeboss_base_url', newUrl);
+      alert('Tunnel URL updated successfully!');
+    }
 
     const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
@@ -501,16 +575,16 @@
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
-      // Smart scroll check: only auto-scroll if user is already near bottom
       const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80;
       if (isAtBottom) {
         chatBox.scrollTop = chatBox.scrollHeight;
       }
 
       try {
+        const currentBaseUrl = localStorage.getItem('jakeboss_base_url') || tunnelInput.value.trim();
         const apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
 
-        const response = await fetch(`${baseUrl}/api/chat`, {
+        const response = await fetch(`${currentBaseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -572,7 +646,7 @@
         saveSessions();
 
       } catch (err) {
-        responseContent.textContent = `Connection error: ${err.message}`;
+        responseContent.textContent = `Connection error: ${err.message}. Please check your Tunnel URL in the header.`;
         responseContent.style.color = '#ef4444';
       } finally {
         inputEl.disabled = false;
