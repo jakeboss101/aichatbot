@@ -6,16 +6,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JakeBoss AI Assistant</title>
-  
-  <!-- ========================================== -->
-  <!-- ⚙️ QUICK SETTINGS: EDIT YOUR TUNNEL URL HERE -->
-  <!-- ========================================== -->
-  <script>
-    // You can edit this directly or change it from the settings panel in the app header!
-    if (!localStorage.getItem('jakeboss_base_url')) {
-      localStorage.setItem('jakeboss_base_url', 'https://katie-providence-dozens-acid.trycloudflare.com');
-    }
-  </script>
 
   <style>
     :root {
@@ -260,46 +250,22 @@
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
-    /* Tunnel URL Configuration Box in Header */
-    .url-config-box {
+    /* Top Right Token Stats Badge */
+    .token-stats-badge {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 20px;
       display: flex;
       align-items: center;
       gap: 6px;
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      padding: 4px 8px;
-      border-radius: 8px;
     }
 
-    .url-config-box label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .url-config-box input {
-      background: transparent;
-      border: none;
+    .token-stats-badge span {
       color: var(--accent-color);
-      font-size: 0.85rem;
-      outline: none;
-      width: 240px;
-    }
-
-    .url-config-box button {
-      background: var(--border-color);
-      color: var(--text-main);
-      border: none;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      cursor: pointer;
-    }
-
-    .url-config-box button:hover {
-      background: var(--accent-color);
-      color: #0f172a;
+      font-weight: 600;
     }
 
     /* Chat Area */
@@ -345,6 +311,20 @@
       color: var(--text-main);
       border-radius: 20px 20px 20px 4px;
       padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .token-speed-tag {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      padding: 2px 8px;
+      border-radius: 6px;
+      align-self: flex-start;
+      margin-top: 4px;
     }
 
     /* Input Dock */
@@ -432,9 +412,6 @@
       .sidebar:not(.collapsed) {
         box-shadow: 5px 0 25px rgba(0,0,0,0.5);
       }
-      .url-config-box input {
-        width: 160px;
-      }
     }
   </style>
 </head>
@@ -465,12 +442,9 @@
           <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
-      
-      <!-- Editable Tunnel URL Box -->
-      <div class="url-config-box">
-        <label for="tunnel-url-input">Tunnel URL:</label>
-        <input type="text" id="tunnel-url-input" />
-        <button onclick="saveTunnelUrl()">Save</button>
+      <!-- Top Right Token Stats -->
+      <div class="token-stats-badge">
+        Total Tokens: <span id="total-tokens-display">0</span>
       </div>
     </header>
 
@@ -487,20 +461,26 @@
   </div>
 
   <script>
+    // =========================================================================
+    // ⚙️ CODER CONFIGURATION: EDIT YOUR TUNNEL URL HERE
+    // =========================================================================
+    const TUNNEL_BASE_URL = "https://katie-providence-dozens-acid.trycloudflare.com";
+    // =========================================================================
+
     const modelName = "huihui_ai/qwen2.5-abliterate:7b";
+    const MAX_CONTEXT_CHARS = 24000;
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let currentSessionId = null;
 
-    // Initialize Tunnel URL input box value
-    const tunnelInput = document.getElementById('tunnel-url-input');
-    tunnelInput.value = localStorage.getItem('jakeboss_base_url') || 'https://katie-providence-dozens-acid.trycloudflare.com';
+    const chatBox = document.getElementById('chat-box');
+    let userScrolledUp = false;
 
-    function saveTunnelUrl() {
-      const newUrl = tunnelInput.value.trim().replace(/\/$/, ''); // remove trailing slash if any
-      localStorage.setItem('jakeboss_base_url', newUrl);
-      alert('Tunnel URL updated successfully!');
-    }
+    chatBox.addEventListener('scroll', () => {
+      const threshold = 50;
+      const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight <= threshold;
+      userScrolledUp = !isAtBottom;
+    });
 
     const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
@@ -512,8 +492,23 @@
       document.getElementById('sidebar').classList.toggle('collapsed');
     }
 
+    fnEstimateTokens = (text) => Math.ceil(text.length / 4);
+
+    function updateHeaderTokenStats() {
+      const session = sessions.find(s => s.id === currentSessionId);
+      if (!session) {
+        document.getElementById('total-tokens-display').textContent = '0';
+        return;
+      }
+      let totalChars = 0;
+      session.messages.forEach(m => totalChars += m.content.length);
+      const estimatedTokens = Math.ceil(totalChars / 4);
+      document.getElementById('total-tokens-display').textContent = estimatedTokens.toLocaleString();
+    }
+
     function saveSessions() {
       localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      updateHeaderTokenStats();
     }
 
     function renderSidebar() {
@@ -529,17 +524,20 @@
         textSpan.textContent = session.title || 'Chat Session';
         textSpan.onclick = () => switchSession(session.id);
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-item-btn';
-        deleteBtn.title = 'Delete Chat';
-        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-        deleteBtn.onclick = (e) => {
-          e.stopPropagation();
-          deleteSession(session.id);
-        };
-
         item.appendChild(textSpan);
-        item.appendChild(deleteBtn);
+
+        if (session.title !== 'New Chat') {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'delete-item-btn';
+          deleteBtn.title = 'Delete Chat';
+          deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+          deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteSession(session.id);
+          };
+          item.appendChild(deleteBtn);
+        }
+
         historyList.appendChild(item);
       });
     }
@@ -579,18 +577,18 @@
       renderSidebar();
       renderCurrentChat();
 
-      // Auto-collapse sidebar on new chat
       document.getElementById('sidebar').classList.add('collapsed');
     }
 
     function switchSession(id) {
       currentSessionId = id;
+      userScrolledUp = false;
       renderSidebar();
       renderCurrentChat();
+      updateHeaderTokenStats();
     }
 
     function renderCurrentChat() {
-      const chatBox = document.getElementById('chat-box');
       chatBox.innerHTML = '';
 
       const session = sessions.find(s => s.id === currentSessionId);
@@ -602,19 +600,26 @@
             </div>
           </div>
         `;
+        updateHeaderTokenStats();
         return;
       }
 
-      session.messages.forEach(msg => {
+      session.messages.forEach((msg, index) => {
         const row = document.createElement('div');
         row.className = 'message-row';
         if (msg.role === 'user') {
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
         } else {
+          let speedTagHtml = '';
+          // If message object stored metadata with token speed, render it
+          if (msg.speed) {
+            speedTagHtml = `<div class="token-speed-tag">⚡ ${msg.speed}</div>`;
+          }
           row.innerHTML = `
             <div class="message bot">
               <div class="response-content"></div>
+              ${speedTagHtml}
             </div>
           `;
           row.querySelector('.response-content').textContent = msg.content;
@@ -623,6 +628,7 @@
       });
 
       chatBox.scrollTop = chatBox.scrollHeight;
+      updateHeaderTokenStats();
     }
 
     function handleKeyDown(event) {
@@ -632,10 +638,23 @@
       }
     }
 
+    function getBoundedMessages(messages) {
+      let totalChars = 0;
+      let bounded = [];
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msgLen = messages[i].content.length;
+        if (totalChars + msgLen > MAX_CONTEXT_CHARS && bounded.length > 0) {
+          break;
+        }
+        bounded.unshift(messages[i]);
+        totalChars += msgLen;
+      }
+      return bounded;
+    }
+
     async function sendMessage() {
       const inputEl = document.getElementById('user-input');
       const sendBtn = document.getElementById('send-btn');
-      const chatBox = document.getElementById('chat-box');
       const prompt = inputEl.value.trim();
 
       if (!prompt) return;
@@ -666,6 +685,9 @@
       inputEl.disabled = true;
       sendBtn.disabled = true;
 
+      userScrolledUp = false;
+      chatBox.scrollTop = chatBox.scrollHeight;
+
       // Bot Message Shell
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
@@ -677,16 +699,13 @@
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
-      const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80;
-      if (isAtBottom) {
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
+      const startTime = performance.now();
+      let generatedTokenCount = 0;
 
       try {
-        const currentBaseUrl = localStorage.getItem('jakeboss_base_url') || tunnelInput.value.trim();
-        const apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
+        const apiMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
 
-        const response = await fetch(`${currentBaseUrl}/api/chat`, {
+        const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -718,11 +737,12 @@
               const parsed = JSON.parse(trimmed);
               if (parsed.message && parsed.message.content) {
                 if (fullResponse === '') responseContent.textContent = '';
-                fullResponse += parsed.message.content;
+                const chunk = parsed.message.content;
+                fullResponse += chunk;
+                generatedTokenCount += Math.ceil(chunk.length / 4);
                 responseContent.textContent = fullResponse;
                 
-                const stayAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80;
-                if (stayAtBottom) {
+                if (!userScrolledUp) {
                   chatBox.scrollTop = chatBox.scrollHeight;
                 }
               }
@@ -735,20 +755,37 @@
             const parsed = JSON.parse(streamBuffer.trim());
             if (parsed.message && parsed.message.content) {
               if (fullResponse === '') responseContent.textContent = '';
-              fullResponse += parsed.message.content;
+              const chunk = parsed.message.content;
+              fullResponse += chunk;
+              generatedTokenCount += Math.ceil(chunk.length / 4);
               responseContent.textContent = fullResponse;
+              if (!userScrolledUp) {
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
             }
           } catch (e) {}
         }
 
+        const endTime = performance.now();
+        const durationSec = (endTime - startTime) / 1000;
+        const tokensPerSec = durationSec > 0 ? (generatedTokenCount / durationSec).toFixed(1) : '0.0';
+        const speedText = `${tokensPerSec} tok/s`;
+
+        // Append speed badge under bot message UI
+        const speedTag = document.createElement('div');
+        speedTag.className = 'token-speed-tag';
+        speedTag.textContent = `⚡ ${speedText}`;
+        botRow.querySelector('.message.bot').appendChild(speedTag);
+
         session.messages.push({
           role: 'assistant',
-          content: fullResponse
+          content: fullResponse,
+          speed: speedText
         });
         saveSessions();
 
       } catch (err) {
-        responseContent.textContent = `Connection error: ${err.message}. Please check your Tunnel URL in the header.`;
+        responseContent.textContent = `Connection error: ${err.message}. Please check your TUNNEL_BASE_URL configuration.`;
         responseContent.style.color = '#ef4444';
       } finally {
         inputEl.disabled = false;
@@ -757,7 +794,6 @@
       }
     }
 
-    // Initialize session state on load
     if (sessions.length === 0) {
       startNewChat();
     } else {
