@@ -358,7 +358,6 @@
       white-space: pre-wrap;
       max-height: 300px;
       overflow-y: auto;
-      transition: max-height 0.2s ease, opacity 0.2s ease;
     }
 
     .thinking-wrapper.collapsed .thinking-content {
@@ -515,7 +514,6 @@
         </div>
       </div>
       <div class="header-right">
-        <!-- Optional Web Search Toggle Switch -->
         <label class="search-toggle" title="Enable live DuckDuckGo web search">
           <input type="checkbox" id="search-enable-checkbox">
           <span class="toggle-slider"></span>
@@ -541,12 +539,12 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.8.0</div>
+  <div class="version-tag">v1.8.1</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://privacy-needs-described-political.trycloudflare.com";
     const MAX_CONTEXT_CHARS = 24000;
-    const selectedModel = "qwen3.5:4b"; // Optimal for 16GB M2 Air
+    const selectedModel = "qwen3.5:4b";
 
     const SYSTEM_PROMPT = `You are Jake, a concise hybrid AI for code and creativity. Zero fluff. Complete code/answers only. No filler text.`;
 
@@ -724,21 +722,21 @@
       renderCurrentChat();
     }
 
-    function parseThinkingAndContent(rawText) {
-      let thinking = "";
+    function parseThinkingAndContent(rawText, separateThinking = '') {
+      let thinking = separateThinking;
       let content = rawText;
 
       const thinkMatch = rawText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
       if (thinkMatch) {
-        thinking = thinkMatch[1];
+        thinking = (thinking ? thinking + '\n' : '') + thinkMatch[1];
         content = rawText.replace(/<think>[\s\S]*?(?:<\/think>|$)/i, '').trimStart();
       }
 
       return { thinking, content };
     }
 
-    function renderBotMessage(container, rawText) {
-      const { thinking, content } = parseThinkingAndContent(rawText);
+    function renderBotMessage(container, rawText, separateThinking = '') {
+      const { thinking, content } = parseThinkingAndContent(rawText, separateThinking);
       container.innerHTML = '';
 
       if (thinking) {
@@ -762,12 +760,17 @@
         container.appendChild(thinkingWrapper);
       }
 
-      if (content || !thinking) {
+      if (content) {
         const responseContent = document.createElement('div');
         responseContent.className = 'response-content';
         responseContent.innerHTML = marked.parse(content);
         container.appendChild(responseContent);
         Prism.highlightAllUnder(responseContent);
+      } else if (!thinking) {
+        const responseContent = document.createElement('div');
+        responseContent.className = 'response-content';
+        responseContent.textContent = 'Thinking...';
+        container.appendChild(responseContent);
       }
     }
 
@@ -786,7 +789,7 @@
           let speedTagHtml = msg.speed ? `<div class="token-speed-tag">⚡ ${msg.speed}</div>` : '';
           row.innerHTML = `<div class="message bot"><div class="bot-body"></div>${speedTagHtml}</div>`;
           const botBody = row.querySelector('.bot-body');
-          renderBotMessage(botBody, msg.content);
+          renderBotMessage(botBody, msg.content, msg.thinking || '');
         }
         chatBox.appendChild(row);
       });
@@ -882,6 +885,7 @@
       const startTime = performance.now();
       let generatedTokenCount = 0;
       let fullResponse = '';
+      let separateThinking = '';
 
       try {
         const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
@@ -922,16 +926,27 @@
             if (!trimmed) continue;
             try {
               const parsed = JSON.parse(trimmed);
-              if (parsed.message && parsed.message.content) {
-                const chunk = parsed.message.content;
-                fullResponse += chunk;
-                
-                const chunkTokens = Math.ceil(chunk.length / 4);
+              
+              let chunk = "";
+              let thinkChunk = "";
+
+              if (parsed.message) {
+                if (parsed.message.thinking) thinkChunk = parsed.message.thinking;
+                if (parsed.message.reasoning_content) thinkChunk = parsed.message.reasoning_content;
+                if (parsed.message.content) chunk = parsed.message.content;
+              }
+
+              if (thinkChunk) separateThinking += thinkChunk;
+              if (chunk) fullResponse += chunk;
+
+              const totalChunkLen = chunk.length + thinkChunk.length;
+              if (totalChunkLen > 0) {
+                const chunkTokens = Math.ceil(totalChunkLen / 4);
                 generatedTokenCount += chunkTokens;
                 lifetimeTokens += chunkTokens;
                 updateOverallTokenStats();
 
-                renderBotMessage(botBody, fullResponse);
+                renderBotMessage(botBody, fullResponse, separateThinking);
                 if (!userScrolledUp) scrollToBottom();
               }
             } catch (e) {}
@@ -947,13 +962,13 @@
         speedTag.textContent = `⚡ ${speedText}${webContext ? ' • 🌐 Web' : ''}`;
         botRow.querySelector('.message.bot').appendChild(speedTag);
 
-        session.messages.push({ role: 'assistant', content: fullResponse, speed: speedText });
+        session.messages.push({ role: 'assistant', content: fullResponse, thinking: separateThinking, speed: speedText });
         saveSessions();
 
       } catch (err) {
         if (err.name === 'AbortError') {
-          if (fullResponse.trim()) {
-            session.messages.push({ role: 'assistant', content: fullResponse, speed: 'aborted' });
+          if (fullResponse.trim() || separateThinking.trim()) {
+            session.messages.push({ role: 'assistant', content: fullResponse, thinking: separateThinking, speed: 'aborted' });
             saveSessions();
           } else { botRow.remove(); }
         } else {
