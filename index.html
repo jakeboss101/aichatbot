@@ -501,12 +501,8 @@ CODING RULES:
 - ALWAYS ask the user for confirmation and clarify requirements BEFORE generating or writing any code. Do not output code immediately upon request without asking first.
 
 CONCISENESS RULES:
-- DEFAULT MODE: Keep answers strictly direct and under 100 words. Avoid fluff.
-- EXCEPTION MODE: When writing code, stories, or film scripts, write fully realized, un-truncated prose without strict word limits.
+- Keep answers strictly direct and under 100 words. Avoid fluff.
 
-FORMATTING RULES:
-- Never wrap creative writing, film scripts, or plain text in Markdown code blocks (\`\`\` or \`\`\`plaintext).
-- Only use code blocks for actual programming code (HTML, JS, Python, etc.).`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
