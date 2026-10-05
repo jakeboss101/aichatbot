@@ -527,17 +527,20 @@
     }
 
     const renderer = new marked.Renderer();
-    renderer.code = function(token) {
-      const code = (typeof token === 'object' ? token.text : token) || '';
-      const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
-      const base64Code = btoa(unescape(encodeURIComponent(code)));
+    renderer.code = function(code, language) {
+      const textCode = typeof code === 'object' ? code.text : code;
+      const lang = typeof code === 'object' ? code.lang : language;
+      const finalCode = textCode || '';
+      const finalLang = lang || 'plaintext';
+      
+      const base64Code = btoa(unescape(encodeURIComponent(finalCode)));
       return `
         <div class="code-block-wrapper">
           <div class="code-block-header">
-            <span>${language}</span>
+            <span>${finalLang}</span>
             <button class="copy-btn" onclick="copyCode(this, '${base64Code}')">Copy</button>
           </div>
-          <pre><code class="language-${language}">${escapeHtml(code)}</code></pre>
+          <pre><code class="language-${finalLang}">${escapeHtml(finalCode)}</code></pre>
         </div>
       `;
     };
@@ -720,7 +723,6 @@
       return bounded;
     }
 
-    // Optional DuckDuckGo web search via CORS proxy
     async function searchDuckDuckGo(query) {
       try {
         const proxyUrl = "https://api.allorigins.win/get?url=";
@@ -783,7 +785,6 @@
       userScrolledUp = false;
       scrollToBottom();
 
-      // Check search toggle state
       const isSearchEnabled = document.getElementById('search-enable-checkbox').checked;
       let webContext = "";
 
