@@ -556,7 +556,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.4.0</div>
+  <div class="version-tag">v1.4.1</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://org-myers-finances-pressure.trycloudflare.com";
@@ -727,7 +727,7 @@
 
     function deleteSession(id) {
       if (activeController) {
-        activeController.abort();x
+        activeController.abort();
         activeController = null;
       }
       sessions = sessions.filter(s => s.id !== id);
@@ -905,13 +905,15 @@
           ...getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }))
         ];
 
+        // Try standard endpoint first, fallback if necessary
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: modelName,
             messages: apiMessages,
-            stream: true
+            stream: true,
+            max_tokens: 2048
           }),
           signal: activeController.signal
         });
@@ -933,10 +935,20 @@
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
+
+            // Handle standard SSE 'data: ' prefix if present
+            let cleanLine = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed;
+            if (cleanLine === '[DONE]') continue;
+
             try {
-              const parsed = JSON.parse(trimmed);
-              if (parsed.message && parsed.message.content) {
-                const chunk = parsed.message.content;
+              const parsed = JSON.parse(cleanLine);
+              
+              // Support both OpenAI delta format and Ollama message format
+              const chunk = parsed.choices?.[0]?.delta?.content 
+                         || parsed.message?.content 
+                         || '';
+
+              if (chunk) {
                 fullResponse += chunk;
                 const chunkTokens = Math.ceil(chunk.length / 4);
                 generatedTokenCount += chunkTokens;
@@ -953,15 +965,21 @@
         }
 
         if (streamBuffer.trim()) {
-          try {
-            const parsed = JSON.parse(streamBuffer.trim());
-            if (parsed.message && parsed.message.content) {
-              fullResponse += parsed.message.content;
-              responseContent.innerHTML = marked.parse(fullResponse);
-              Prism.highlightAllUnder(responseContent);
-              if (!userScrolledUp) scrollToBottom();
-            }
-          } catch (e) {}
+          let cleanLine = streamBuffer.trim().startsWith('data: ') ? streamBuffer.trim().slice(6) : streamBuffer.trim();
+          if (cleanLine !== '[DONE]') {
+            try {
+              const parsed = JSON.parse(cleanLine);
+              const chunk = parsed.choices?.[0]?.delta?.content 
+                         || parsed.message?.content 
+                         || '';
+              if (chunk) {
+                fullResponse += chunk;
+                responseContent.innerHTML = marked.parse(fullResponse);
+                Prism.highlightAllUnder(responseContent);
+                if (!userScrolledUp) scrollToBottom();
+              }
+            } catch (e) {}
+          }
         }
 
         const endTime = performance.now();
