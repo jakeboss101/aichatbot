@@ -322,8 +322,13 @@
       font-weight: 600;
     }
 
-    .code-block-actions {
+    .code-block-footer {
       display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      background-color: #161b22;
+      padding: 6px 12px;
+      border-top: 1px solid var(--border-color);
       gap: 6px;
     }
 
@@ -331,7 +336,7 @@
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--border-color);
       color: var(--text-main);
-      padding: 3px 8px;
+      padding: 3px 10px;
       border-radius: 4px;
       font-size: 0.75rem;
       cursor: pointer;
@@ -683,8 +688,8 @@
         header.className = 'code-block-header';
         header.innerHTML = `<span>${language.toUpperCase()}</span>`;
 
-        const actionsContainer = document.createElement('div');
-        actionsContainer.className = 'code-block-actions';
+        const footer = document.createElement('div');
+        footer.className = 'code-block-footer';
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'code-action-btn';
@@ -694,20 +699,20 @@
           copyBtn.innerText = 'Copied!';
           setTimeout(() => copyBtn.innerText = 'Copy', 2000);
         };
-        actionsContainer.appendChild(copyBtn);
+        footer.appendChild(copyBtn);
 
         if (isHtml) {
           const previewBtn = document.createElement('button');
           previewBtn.className = 'code-action-btn';
           previewBtn.innerText = '▶ Preview';
           previewBtn.onclick = () => openHtmlPreview(codeText);
-          actionsContainer.appendChild(previewBtn);
+          footer.appendChild(previewBtn);
         }
 
-        header.appendChild(actionsContainer);
         pre.parentNode.insertBefore(wrapper, pre);
         wrapper.appendChild(header);
         wrapper.appendChild(pre);
+        wrapper.appendChild(footer);
       });
     }
 
