@@ -477,9 +477,24 @@
     let currentSessionId = null;
     let abortController = null;
     let isGenerating = false;
+    let userCoordinates = null;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
     document.getElementById('search-toggle').checked = enableSearch;
+
+    // Optional: Request user's GPS coordinates if allowed by browser
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          userCoordinates = {
+            latitude: pos.coords.latitude.toFixed(4),
+            longitude: pos.coords.longitude.toFixed(4)
+          };
+        },
+        err => { /* Location permission denied or unavailable */ },
+        { timeout: 5000 }
+      );
+    }
 
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('open');
@@ -614,6 +629,26 @@
       let fullThinking = '';
       let fullResponse = '';
 
+      // Get user's local timezone (e.g. "America/Los_Angeles")
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
+
+      // Format browser's exact current local date & time
+      const clientTimeFormatted = new Date().toLocaleString([], {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+
+      // Construct client location object
+      const clientLocation = {
+        timeZone: userTimeZone,
+        coordinates: userCoordinates
+      };
+
       try {
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
@@ -623,6 +658,8 @@
             messages: session.messages.map(m => ({ role: m.role, content: m.content })),
             think: enableThinking,
             search: enableSearch,
+            clientTime: clientTimeFormatted,
+            clientLocation: clientLocation,
             stream: true
           }),
           signal: abortController.signal
