@@ -6,7 +6,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JakeBoss AI Assistant</title>
-
   <style>
     :root {
       --bg-color: #0e1117;
@@ -18,7 +17,7 @@
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
       --input-bg: #1e2430;
-      --sidebar-width: 220px;
+      --radius-lg: 18px;
     }
 
     * {
@@ -38,28 +37,39 @@
       overflow: hidden;
     }
 
-    /* Permanent Auto-Collapsing Sidebar */
+    /* Sidebar Drawer */
     .sidebar {
-      width: var(--sidebar-width);
-      min-width: var(--sidebar-width);
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
       height: 100%;
       background-color: var(--panel-bg);
       border-right: 1px solid var(--border-color);
+      z-index: 100;
+      transition: left 0.3s ease;
       display: flex;
       flex-direction: column;
-      padding: 14px 10px;
-      gap: 12px;
-      z-index: 20;
-      transition: transform 0.3s ease;
+      padding: 20px 16px;
     }
 
-    .sidebar.collapsed {
-      transform: translateX(calc(-1 * var(--sidebar-width)));
-      min-width: 0;
-      width: 0;
-      padding: 0;
-      overflow: hidden;
-      border: none;
+    .sidebar.open {
+      left: 0;
+    }
+
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 90;
+      display: none;
+    }
+
+    .sidebar-overlay.active {
+      display: block;
     }
 
     .new-chat-btn {
@@ -67,15 +77,15 @@
       background-color: var(--accent-color);
       color: #0f172a;
       border: none;
-      padding: 12px;
+      padding: 14px 18px;
       border-radius: 12px;
-      font-size: 0.95rem;
+      font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       transition: transform 0.1s, opacity 0.2s;
     }
 
@@ -83,118 +93,31 @@
       transform: scale(0.98);
     }
 
-    .chat-history-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .history-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 10px;
-      border-radius: 8px;
-      font-size: 0.9rem;
+    .sidebar-info {
+      margin-top: auto;
+      font-size: 0.85rem;
       color: var(--text-muted);
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
+      line-height: 1.5;
     }
 
-    .history-item-text {
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .delete-item-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.15s, color 0.15s;
-      border-radius: 4px;
-    }
-
-    .history-item:hover .delete-item-btn {
-      opacity: 1;
-    }
-
-    .delete-item-btn:hover {
-      color: #ef4444;
-      background-color: rgba(239, 68, 68, 0.1);
-    }
-
-    .history-item.active .delete-item-btn {
-      opacity: 1;
-    }
-
-    .history-item:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-      color: var(--text-main);
-    }
-
-    .history-item.active {
-      background-color: var(--input-bg);
-      color: var(--accent-color);
-      font-weight: 600;
-      border: 1px solid var(--border-color);
-    }
-
-    .sidebar-footer {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-top: 8px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .delete-all-btn {
-      width: 100%;
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border-color);
-      padding: 8px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-
-    .delete-all-btn:hover {
-      background-color: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
-      border-color: #ef4444;
-    }
-
-    .footer-brand {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      text-align: center;
-    }
-
-    /* Main Workspace Container */
+    /* Main Container */
     .app-container {
-      flex: 1;
+      width: 100%;
+      max-width: 850px;
+      margin: 0 auto;
       height: 100%;
       display: flex;
       flex-direction: column;
       background-color: var(--bg-color);
+      border-left: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      min-width: 0;
     }
 
+    /* Header Bar */
     header {
-      padding: 12px 20px;
+      padding: 14px 20px;
       border-bottom: 1px solid var(--border-color);
       background-color: rgba(14, 17, 23, 0.85);
       backdrop-filter: blur(12px);
@@ -203,17 +126,9 @@
       align-items: center;
       justify-content: space-between;
       z-index: 10;
-      gap: 15px;
-      flex-wrap: wrap;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .menu-toggle-btn {
+    .menu-btn {
       background: transparent;
       border: none;
       color: var(--text-main);
@@ -221,7 +136,6 @@
       padding: 4px;
       display: flex;
       align-items: center;
-      justify-content: center;
     }
 
     .brand {
@@ -250,36 +164,15 @@
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
-    /* Top Right Token Stats Badge */
-    .token-stats-badge {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      padding: 6px 12px;
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .token-stats-badge span {
-      color: var(--accent-color);
-      font-weight: 600;
-    }
-
     /* Chat Area */
     #chat-box {
       flex: 1;
       overflow-y: auto;
-      padding: 24px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 20px;
       scroll-behavior: smooth;
-      max-width: 850px;
-      width: 100%;
-      margin: 0 auto;
     }
 
     .message-row {
@@ -291,7 +184,7 @@
     .message {
       max-width: 88%;
       padding: 16px 20px;
-      font-size: 1.05rem;
+      font-size: 1.05rem; /* Larger font size for easy reading */
       line-height: 1.6;
       word-break: break-word;
       white-space: pre-wrap;
@@ -311,23 +204,9 @@
       color: var(--text-main);
       border-radius: 20px 20px 20px 4px;
       padding-left: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
     }
 
-    .token-speed-tag {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-color);
-      padding: 2px 8px;
-      border-radius: 6px;
-      align-self: flex-start;
-      margin-top: 4px;
-    }
-
-    /* Input Dock */
+    /* Input Dock Area */
     .input-wrapper {
       padding: 12px 16px 16px 16px;
       background-color: var(--bg-color);
@@ -335,8 +214,6 @@
     }
 
     .input-card {
-      max-width: 850px;
-      margin: 0 auto;
       background-color: var(--input-bg);
       border: 1px solid var(--border-color);
       border-radius: 28px;
@@ -401,54 +278,48 @@
       fill: currentColor;
     }
 
-    @media (max-width: 768px) {
-      :root {
-        --sidebar-width: 200px;
-      }
-      .sidebar {
-        position: absolute;
-        height: 100%;
-      }
-      .sidebar:not(.collapsed) {
-        box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+    @media (max-width: 850px) {
+      .app-container {
+        border-left: none;
+        border-right: none;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Permanent Collapsible Sidebar -->
+  <!-- Slide-out Sidebar -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
   <aside id="sidebar" class="sidebar">
     <button class="new-chat-btn" onclick="startNewChat()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      New Chat
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Start New Chat
     </button>
-    <div id="chat-history-list" class="chat-history-list"></div>
-    <div class="sidebar-footer">
-      <button class="delete-all-btn" onclick="deleteAllChats()">Delete All Chats</button>
-      <div class="footer-brand">JakeBoss AI</div>
+    <div class="sidebar-info">
+      <p>Click <strong>Start New Chat</strong> if the conversation gets slow or long.</p>
     </div>
   </aside>
 
-  <!-- Main Workspace -->
+  <!-- Main App Shell -->
   <div class="app-container">
     <header>
-      <div class="header-left">
-        <button class="menu-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle Sidebar">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
-        <div class="brand">
-          <div class="brand-icon"></div>
-          <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
-        </div>
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open Menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+
+      <div class="brand">
+        <div class="brand-icon"></div>
+        <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
       </div>
-      <!-- Top Right Token Stats -->
-      <div class="token-stats-badge">
-        Total Tokens: <span id="total-tokens-display">0</span>
-      </div>
+
+      <div style="width: 24px;"></div> <!-- Spacer balance for menu icon -->
     </header>
 
-    <div id="chat-box"></div>
+    <div id="chat-box">
+      <div class="message-row">
+        <div class="message bot">Hello! I am your personal assistant. How can I help you today?</div>
+      </div>
+    </div>
 
     <div class="input-wrapper">
       <div class="input-card">
@@ -461,26 +332,10 @@
   </div>
 
   <script>
-    // =========================================================================
-    // ⚙️ CODER CONFIGURATION: EDIT YOUR TUNNEL URL HERE
-    // =========================================================================
-    const TUNNEL_BASE_URL = "https://katie-providence-dozens-acid.trycloudflare.com";
-    // =========================================================================
+    const baseUrl = "https://remote-basis-avatar-mpeg.trycloudflare.com";
+    const modelName = "hf.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive:Q4_K_M";
 
-    const modelName = "huihui_ai/qwen2.5-abliterate:7b";
-    const MAX_CONTEXT_CHARS = 24000;
-
-    let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
-    let currentSessionId = null;
-
-    const chatBox = document.getElementById('chat-box');
-    let userScrolledUp = false;
-
-    chatBox.addEventListener('scroll', () => {
-      const threshold = 50;
-      const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight <= threshold;
-      userScrolledUp = !isAtBottom;
-    });
+    let messagesHistory = [];
 
     const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
@@ -489,146 +344,19 @@
     });
 
     function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    }
-
-    fnEstimateTokens = (text) => Math.ceil(text.length / 4);
-
-    function updateHeaderTokenStats() {
-      const session = sessions.find(s => s.id === currentSessionId);
-      if (!session) {
-        document.getElementById('total-tokens-display').textContent = '0';
-        return;
-      }
-      let totalChars = 0;
-      session.messages.forEach(m => totalChars += m.content.length);
-      const estimatedTokens = Math.ceil(totalChars / 4);
-      document.getElementById('total-tokens-display').textContent = estimatedTokens.toLocaleString();
-    }
-
-    function saveSessions() {
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
-      updateHeaderTokenStats();
-    }
-
-    function renderSidebar() {
-      const historyList = document.getElementById('chat-history-list');
-      historyList.innerHTML = '';
-
-      sessions.forEach(session => {
-        const item = document.createElement('div');
-        item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        
-        const textSpan = document.createElement('span');
-        textSpan.className = 'history-item-text';
-        textSpan.textContent = session.title || 'Chat Session';
-        textSpan.onclick = () => switchSession(session.id);
-
-        item.appendChild(textSpan);
-
-        if (session.title !== 'New Chat') {
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'delete-item-btn';
-          deleteBtn.title = 'Delete Chat';
-          deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-          deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            deleteSession(session.id);
-          };
-          item.appendChild(deleteBtn);
-        }
-
-        historyList.appendChild(item);
-      });
-    }
-
-    function deleteSession(id) {
-      sessions = sessions.filter(s => s.id !== id);
-      saveSessions();
-
-      if (sessions.length === 0) {
-        startNewChat();
-      } else if (currentSessionId === id) {
-        currentSessionId = sessions[0].id;
-        renderSidebar();
-        renderCurrentChat();
-      } else {
-        renderSidebar();
-      }
-    }
-
-    function deleteAllChats() {
-      if (confirm('Are you sure you want to delete all chat history?')) {
-        sessions = [];
-        localStorage.removeItem('jakeboss_sessions');
-        startNewChat();
-      }
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-overlay').classList.toggle('active');
     }
 
     function startNewChat() {
-      const newSession = {
-        id: Date.now().toString(),
-        title: 'New Chat',
-        messages: []
-      };
-      sessions.unshift(newSession);
-      currentSessionId = newSession.id;
-      saveSessions();
-      renderSidebar();
-      renderCurrentChat();
-
-      document.getElementById('sidebar').classList.add('collapsed');
-    }
-
-    function switchSession(id) {
-      currentSessionId = id;
-      userScrolledUp = false;
-      renderSidebar();
-      renderCurrentChat();
-      updateHeaderTokenStats();
-    }
-
-    function renderCurrentChat() {
-      chatBox.innerHTML = '';
-
-      const session = sessions.find(s => s.id === currentSessionId);
-      if (!session || session.messages.length === 0) {
-        chatBox.innerHTML = `
-          <div class="message-row">
-            <div class="message bot">
-              <div class="response-content">Hello! I am your personal assistant. How can I help you today?</div>
-            </div>
-          </div>
-        `;
-        updateHeaderTokenStats();
-        return;
-      }
-
-      session.messages.forEach((msg, index) => {
-        const row = document.createElement('div');
-        row.className = 'message-row';
-        if (msg.role === 'user') {
-          row.innerHTML = `<div class="message user"></div>`;
-          row.querySelector('.message').textContent = msg.content;
-        } else {
-          let speedTagHtml = '';
-          // If message object stored metadata with token speed, render it
-          if (msg.speed) {
-            speedTagHtml = `<div class="token-speed-tag">⚡ ${msg.speed}</div>`;
-          }
-          row.innerHTML = `
-            <div class="message bot">
-              <div class="response-content"></div>
-              ${speedTagHtml}
-            </div>
-          `;
-          row.querySelector('.response-content').textContent = msg.content;
-        }
-        chatBox.appendChild(row);
-      });
-
-      chatBox.scrollTop = chatBox.scrollHeight;
-      updateHeaderTokenStats();
+      messagesHistory = [];
+      const chatBox = document.getElementById('chat-box');
+      chatBox.innerHTML = `
+        <div class="message-row">
+          <div class="message bot">Hello! I am your personal assistant. How can I help you today?</div>
+        </div>
+      `;
+      toggleSidebar();
     }
 
     function handleKeyDown(event) {
@@ -638,42 +366,16 @@
       }
     }
 
-    function getBoundedMessages(messages) {
-      let totalChars = 0;
-      let bounded = [];
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const msgLen = messages[i].content.length;
-        if (totalChars + msgLen > MAX_CONTEXT_CHARS && bounded.length > 0) {
-          break;
-        }
-        bounded.unshift(messages[i]);
-        totalChars += msgLen;
-      }
-      return bounded;
-    }
-
     async function sendMessage() {
       const inputEl = document.getElementById('user-input');
       const sendBtn = document.getElementById('send-btn');
+      const chatBox = document.getElementById('chat-box');
       const prompt = inputEl.value.trim();
 
       if (!prompt) return;
 
-      if (!currentSessionId) {
-        startNewChat();
-      }
+      messagesHistory.push({ role: 'user', content: prompt });
 
-      let session = sessions.find(s => s.id === currentSessionId);
-      
-      if (session.messages.length === 0) {
-        session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
-      }
-
-      session.messages.push({ role: 'user', content: prompt });
-      saveSessions();
-      renderSidebar();
-
-      // User Message UI
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
@@ -685,41 +387,31 @@
       inputEl.disabled = true;
       sendBtn.disabled = true;
 
-      userScrolledUp = false;
-      chatBox.scrollTop = chatBox.scrollHeight;
-
-      // Bot Message Shell
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `
-        <div class="message bot">
-          <div class="response-content">...</div>
-        </div>
-      `;
+      botRow.innerHTML = `<div class="message bot">...</div>`;
       chatBox.appendChild(botRow);
-      const responseContent = botRow.querySelector('.response-content');
-
-      const startTime = performance.now();
-      let generatedTokenCount = 0;
+      const botMsgDiv = botRow.querySelector('.message');
+      chatBox.scrollTop = chatBox.scrollHeight;
 
       try {
-        const apiMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
-
-        const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
+        const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: modelName,
-            messages: apiMessages,
+            messages: messagesHistory,
             stream: true
           })
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let fullResponse = '';
+        let fullText = '';
         let streamBuffer = '';
 
         while (true) {
@@ -736,15 +428,9 @@
             try {
               const parsed = JSON.parse(trimmed);
               if (parsed.message && parsed.message.content) {
-                if (fullResponse === '') responseContent.textContent = '';
-                const chunk = parsed.message.content;
-                fullResponse += chunk;
-                generatedTokenCount += Math.ceil(chunk.length / 4);
-                responseContent.textContent = fullResponse;
-                
-                if (!userScrolledUp) {
-                  chatBox.scrollTop = chatBox.scrollHeight;
-                }
+                fullText += parsed.message.content;
+                botMsgDiv.textContent = fullText;
+                chatBox.scrollTop = chatBox.scrollHeight;
               }
             } catch (e) {}
           }
@@ -754,52 +440,23 @@
           try {
             const parsed = JSON.parse(streamBuffer.trim());
             if (parsed.message && parsed.message.content) {
-              if (fullResponse === '') responseContent.textContent = '';
-              const chunk = parsed.message.content;
-              fullResponse += chunk;
-              generatedTokenCount += Math.ceil(chunk.length / 4);
-              responseContent.textContent = fullResponse;
-              if (!userScrolledUp) {
-                chatBox.scrollTop = chatBox.scrollHeight;
-              }
+              fullText += parsed.message.content;
+              botMsgDiv.textContent = fullText;
             }
           } catch (e) {}
         }
 
-        const endTime = performance.now();
-        const durationSec = (endTime - startTime) / 1000;
-        const tokensPerSec = durationSec > 0 ? (generatedTokenCount / durationSec).toFixed(1) : '0.0';
-        const speedText = `${tokensPerSec} tok/s`;
-
-        // Append speed badge under bot message UI
-        const speedTag = document.createElement('div');
-        speedTag.className = 'token-speed-tag';
-        speedTag.textContent = `⚡ ${speedText}`;
-        botRow.querySelector('.message.bot').appendChild(speedTag);
-
-        session.messages.push({
-          role: 'assistant',
-          content: fullResponse,
-          speed: speedText
-        });
-        saveSessions();
+        messagesHistory.push({ role: 'assistant', content: fullText });
 
       } catch (err) {
-        responseContent.textContent = `Connection error: ${err.message}. Please check your TUNNEL_BASE_URL configuration.`;
-        responseContent.style.color = '#ef4444';
+        botMsgDiv.textContent = `Connection error: ${err.message}`;
+        botMsgDiv.style.color = '#ef4444';
       } finally {
         inputEl.disabled = false;
         sendBtn.disabled = false;
         inputEl.focus();
+        chatBox.scrollTop = chatBox.scrollHeight;
       }
-    }
-
-    if (sessions.length === 0) {
-      startNewChat();
-    } else {
-      currentSessionId = sessions[0].id;
-      renderSidebar();
-      renderCurrentChat();
     }
   </script>
 </body>
