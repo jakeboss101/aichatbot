@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>JakeBoss AI Assistant</title>
+  
+  <!-- Markdown & Syntax Highlighting -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
   <style>
     :root {
       --bg-color: #0e1117;
@@ -17,7 +23,7 @@
       --text-thinking: #6b7280;
       --input-bg: #1e2430;
       --danger-color: #ef4444;
-      --sidebar-width: 200px;
+      --sidebar-width: 240px;
     }
 
     * {
@@ -38,6 +44,7 @@
       position: relative;
     }
 
+    /* Sidebar Overlay */
     .sidebar-overlay {
       display: none;
       position: fixed;
@@ -54,6 +61,7 @@
       opacity: 1;
     }
 
+    /* Sidebar */
     .sidebar {
       width: var(--sidebar-width);
       min-width: var(--sidebar-width);
@@ -82,6 +90,11 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .new-chat-btn:hover {
+      opacity: 0.9;
     }
 
     .chat-history-list {
@@ -102,6 +115,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      transition: background-color 0.15s ease;
     }
 
     .history-title {
@@ -128,7 +142,7 @@
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      padding: 2px;
+      padding: 2px 6px;
       border-radius: 4px;
       opacity: 0.6;
     }
@@ -156,6 +170,11 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .delete-all-btn:hover {
+      background-color: rgba(239, 68, 68, 0.1);
     }
 
     .sidebar-footer {
@@ -166,6 +185,7 @@
       border-top: 1px solid var(--border-color);
     }
 
+    /* Main Container */
     .app-container {
       flex: 1;
       height: 100%;
@@ -196,6 +216,7 @@
       background: transparent;
       border: none;
       color: var(--text-main);
+      font-size: 1.2rem;
       cursor: pointer;
     }
 
@@ -256,11 +277,10 @@
 
     .message {
       max-width: 88%;
-      padding: 16px 20px;
-      font-size: 1.05rem;
+      padding: 14px 18px;
+      font-size: 1rem;
       line-height: 1.6;
       word-break: break-word;
-      white-space: pre-wrap;
     }
 
     .message.user {
@@ -269,6 +289,7 @@
       border: 1px solid var(--border-color);
       color: var(--text-main);
       border-radius: 20px 20px 4px 20px;
+      white-space: pre-wrap;
     }
 
     .message.bot {
@@ -277,19 +298,40 @@
       color: var(--text-main);
       border-radius: 20px 20px 20px 4px;
       padding-left: 0;
+      width: 100%;
     }
+
+    /* Markdown styling inside bot message */
+    .response-content p { margin-bottom: 0.8em; }
+    .response-content p:last-child { margin-bottom: 0; }
+    .response-content code {
+      background: var(--input-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .response-content pre {
+      background: #0d1117;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+      border: 1px solid var(--border-color);
+    }
+    .response-content pre code { background: transparent; padding: 0; }
 
     .thinking-block {
       color: var(--text-thinking);
       font-style: italic;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       border-left: 3px solid var(--border-color);
       padding-left: 12px;
       margin-bottom: 12px;
     }
 
     .thinking-label {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -297,6 +339,7 @@
       font-style: normal;
     }
 
+    /* Input Controls */
     .input-wrapper {
       padding: 12px 16px 16px 16px;
       background-color: var(--bg-color);
@@ -308,11 +351,12 @@
       margin: 0 auto;
       background-color: var(--input-bg);
       border: 1px solid var(--border-color);
-      border-radius: 28px;
+      border-radius: 24px;
       padding: 8px 12px;
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 10px;
+      transition: border-color 0.2s;
     }
 
     .input-card:focus-within {
@@ -324,6 +368,7 @@
       align-items: center;
       gap: 8px;
       padding-right: 8px;
+      padding-bottom: 6px;
       border-right: 1px solid var(--border-color);
     }
 
@@ -378,17 +423,19 @@
       border: none;
       outline: none;
       color: var(--text-main);
-      font-size: 1.05rem;
+      font-size: 1rem;
       resize: none;
-      height: 28px;
+      max-height: 160px;
+      min-height: 24px;
       line-height: 1.4;
+      padding: 4px 0;
     }
 
     textarea::placeholder { color: var(--text-muted); }
 
     .send-btn {
-      width: 42px;
-      height: 42px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       border: none;
       background: var(--accent-color);
@@ -397,17 +444,18 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 0.2s;
     }
 
     .send-btn.stop { background: var(--danger-color); color: #ffffff; }
-    .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
+    .send-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
     @media (max-width: 768px) {
       .menu-toggle-btn { display: flex; }
       .sidebar {
         position: fixed;
         top: 0; left: 0; bottom: 0;
-        width: 240px;
         transform: translateX(-100%);
       }
       .sidebar.open { transform: translateX(0); }
@@ -446,19 +494,19 @@
           <div class="control-group">
             <span class="toggle-text">Think</span>
             <label class="switch">
-              <input type="checkbox" id="thinking-toggle" onchange="enableThinking = this.checked; localStorage.setItem('jakeboss_enable_thinking', enableThinking);">
+              <input type="checkbox" id="thinking-toggle">
               <span class="slider"></span>
             </label>
           </div>
           <div class="control-group">
             <span class="toggle-text">Web</span>
             <label class="switch">
-              <input type="checkbox" id="search-toggle" onchange="enableSearch = this.checked; localStorage.setItem('jakeboss_enable_search', enableSearch);">
+              <input type="checkbox" id="search-toggle">
               <span class="slider"></span>
             </label>
           </div>
         </div>
-        <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSendClick();}"></textarea>
+        <textarea id="user-input" placeholder="Type a message..." rows="1"></textarea>
         <button id="send-btn" class="send-btn" onclick="handleSendClick()">
           <svg id="send-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -467,115 +515,209 @@
   </div>
 
   <script>
-    const baseUrl = "https://recycling-belts-paperback-jazz.trycloudflare.com";
-    const modelName = "qwen3.5:4b";
+    const CONFIG = {
+      baseUrl: "https://recycling-belts-paperback-jazz.trycloudflare.com",
+      modelName: "qwen3.5:4b",
+      keys: {
+        sessions: 'jakeboss_sessions',
+        tokens: 'jakeboss_total_tokens',
+        thinking: 'jakeboss_enable_thinking',
+        search: 'jakeboss_enable_search'
+      }
+    };
 
-    let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
-    let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
-    let enableThinking = JSON.parse(localStorage.getItem('jakeboss_enable_thinking') ?? 'false');
-    let enableSearch = JSON.parse(localStorage.getItem('jakeboss_enable_search') ?? 'false');
-    let currentSessionId = null;
-    let abortController = null;
-    let isGenerating = false;
-    let userCoordinates = null;
+    // Application State
+    let state = {
+      sessions: JSON.parse(localStorage.getItem(CONFIG.keys.sessions) || '[]'),
+      totalTokens: parseInt(localStorage.getItem(CONFIG.keys.tokens) || '0', 10),
+      enableThinking: JSON.parse(localStorage.getItem(CONFIG.keys.thinking) ?? 'false'),
+      enableSearch: JSON.parse(localStorage.getItem(CONFIG.keys.search) ?? 'false'),
+      currentSessionId: null,
+      abortController: null,
+      isGenerating: false
+    };
 
-    document.getElementById('thinking-toggle').checked = enableThinking;
-    document.getElementById('search-toggle').checked = enableSearch;
+    // DOM Elements
+    const elements = {
+      sidebar: document.getElementById('sidebar'),
+      sidebarOverlay: document.getElementById('sidebar-overlay'),
+      chatHistoryList: document.getElementById('chat-history-list'),
+      chatBox: document.getElementById('chat-box'),
+      userInput: document.getElementById('user-input'),
+      sendBtn: document.getElementById('send-btn'),
+      totalTokens: document.getElementById('total-tokens'),
+      thinkingToggle: document.getElementById('thinking-toggle'),
+      searchToggle: document.getElementById('search-toggle')
+    };
 
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          userCoordinates = {
-            latitude: pos.coords.latitude.toFixed(4),
-            longitude: pos.coords.longitude.toFixed(4)
-          };
-        },
-        err => {},
-        { timeout: 5000 }
-      );
+    // Setup Highlight.js with Marked
+    marked.setOptions({
+      highlight: function(code, lang) {
+        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+        return hljs.highlight(code, { language }).value;
+      },
+      langPrefix: 'hljs language-'
+    });
+
+    // Initialize UI Event Handlers
+    function init() {
+      elements.thinkingToggle.checked = state.enableThinking;
+      elements.searchToggle.checked = state.enableSearch;
+
+      elements.thinkingToggle.addEventListener('change', (e) => {
+        state.enableThinking = e.target.checked;
+        localStorage.setItem(CONFIG.keys.thinking, state.enableThinking);
+      });
+
+      elements.searchToggle.addEventListener('change', (e) => {
+        state.enableSearch = e.target.checked;
+        localStorage.setItem(CONFIG.keys.search, state.enableSearch);
+      });
+
+      elements.userInput.addEventListener('input', autoResizeTextarea);
+      elements.userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendClick();
+        }
+      });
+
+      updateTotalTokensDisplay();
+
+      if (state.sessions.length === 0) {
+        startNewChat();
+      } else {
+        state.currentSessionId = state.sessions[0].id;
+        renderSidebar();
+        renderCurrentChat();
+      }
+    }
+
+    function autoResizeTextarea() {
+      elements.userInput.style.height = 'auto';
+      elements.userInput.style.height = `${elements.userInput.scrollHeight}px`;
     }
 
     function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('open');
-      document.getElementById('sidebar-overlay').classList.toggle('active');
+      elements.sidebar.classList.toggle('open');
+      elements.sidebarOverlay.classList.toggle('active');
     }
 
     function closeSidebar() {
-      document.getElementById('sidebar').classList.remove('open');
-      document.getElementById('sidebar-overlay').classList.remove('active');
+      elements.sidebar.classList.remove('open');
+      elements.sidebarOverlay.classList.remove('active');
     }
 
     function updateTotalTokensDisplay() {
-      document.getElementById('total-tokens').textContent = totalTokens.toLocaleString();
-      localStorage.setItem('jakeboss_total_tokens', totalTokens.toString());
+      elements.totalTokens.textContent = state.totalTokens.toLocaleString();
+      localStorage.setItem(CONFIG.keys.tokens, state.totalTokens.toString());
+    }
+
+    function saveSessions() {
+      localStorage.setItem(CONFIG.keys.sessions, JSON.stringify(state.sessions));
     }
 
     function renderSidebar() {
-      const historyList = document.getElementById('chat-history-list');
-      historyList.innerHTML = '';
-      sessions.forEach(session => {
+      elements.chatHistoryList.innerHTML = '';
+      state.sessions.forEach(session => {
         const item = document.createElement('div');
-        item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        item.onclick = () => { currentSessionId = session.id; renderSidebar(); renderCurrentChat(); closeSidebar(); };
-        item.innerHTML = `<span class="history-title">${session.title || 'Chat'}</span><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${session.id}')">×</button>`;
-        historyList.appendChild(item);
+        item.className = `history-item ${session.id === state.currentSessionId ? 'active' : ''}`;
+        item.onclick = () => {
+          state.currentSessionId = session.id;
+          renderSidebar();
+          renderCurrentChat();
+          closeSidebar();
+        };
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'history-title';
+        titleSpan.textContent = session.title || 'Chat';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-chat-btn';
+        deleteBtn.textContent = '×';
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteChat(session.id);
+        };
+
+        item.appendChild(titleSpan);
+        item.appendChild(deleteBtn);
+        elements.chatHistoryList.appendChild(item);
       });
     }
 
     function deleteChat(id) {
-      sessions = sessions.filter(s => s.id !== id);
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
-      if (currentSessionId === id) startNewChat();
-      else renderSidebar();
+      state.sessions = state.sessions.filter(s => s.id !== id);
+      saveSessions();
+      if (state.currentSessionId === id) {
+        startNewChat();
+      } else {
+        renderSidebar();
+      }
     }
 
     function deleteAllChats() {
-      sessions = [];
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      state.sessions = [];
+      saveSessions();
       startNewChat();
     }
 
     function startNewChat() {
-      if (abortController) abortController.abort();
+      if (state.abortController) state.abortController.abort();
       const newSession = { id: Date.now().toString(), title: 'New Chat', messages: [] };
-      sessions.unshift(newSession);
-      currentSessionId = newSession.id;
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      state.sessions.unshift(newSession);
+      state.currentSessionId = newSession.id;
+      saveSessions();
       renderSidebar();
       renderCurrentChat();
       closeSidebar();
     }
 
     function renderCurrentChat() {
-      const chatBox = document.getElementById('chat-box');
-      chatBox.innerHTML = '';
-      const session = sessions.find(s => s.id === currentSessionId);
+      elements.chatBox.innerHTML = '';
+      const session = state.sessions.find(s => s.id === state.currentSessionId);
+
       if (!session || session.messages.length === 0) {
-        chatBox.innerHTML = `<div class="message-row"><div class="message bot"><div class="response-content">Hello! I am your personal assistant. How can I help you today?</div></div></div>`;
+        elements.chatBox.innerHTML = `
+          <div class="message-row">
+            <div class="message bot">
+              <div class="response-content">Hello! I am your personal assistant. How can I help you today?</div>
+            </div>
+          </div>`;
         return;
       }
+
       session.messages.forEach(msg => {
         const row = document.createElement('div');
         row.className = 'message-row';
+
         if (msg.role === 'user') {
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
         } else {
-          row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div></div>`;
-          row.querySelector('.response-content').textContent = msg.content;
+          row.innerHTML = `
+            <div class="message bot">
+              ${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}
+              <div class="response-content">${marked.parse(msg.content || '')}</div>
+            </div>`;
         }
-        chatBox.appendChild(row);
+        elements.chatBox.appendChild(row);
       });
-      chatBox.scrollTop = chatBox.scrollHeight;
+      
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
     }
 
     function handleSendClick() {
-      const inputEl = document.getElementById('user-input');
-      const prompt = inputEl.value.trim();
-      if (!prompt) return;
+      const prompt = elements.userInput.value.trim();
+      if (!prompt && !state.isGenerating) return;
 
-      if (isGenerating && abortController) {
-        abortController.abort();
+      if (state.isGenerating && state.abortController) {
+        state.abortController.abort();
         return;
       }
 
@@ -583,26 +725,29 @@
     }
 
     async function sendMessage(prompt) {
-      const inputEl = document.getElementById('user-input');
-      const chatBox = document.getElementById('chat-box');
-      const session = sessions.find(s => s.id === currentSessionId);
+      const session = state.sessions.find(s => s.id === state.currentSessionId);
+      if (!session) return;
 
       if (session.messages.length === 0) {
-        session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
+        session.title = prompt.length > 20 ? prompt.substring(0, 20) + '...' : prompt;
       }
 
       session.messages.push({ role: 'user', content: prompt });
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      saveSessions();
       renderSidebar();
 
+      // Clear & resize input
+      elements.userInput.value = '';
+      autoResizeTextarea();
+
+      // Render User Message
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
       userRow.querySelector('.message').textContent = prompt;
-      chatBox.appendChild(userRow);
+      elements.chatBox.appendChild(userRow);
 
-      inputEl.value = '';
-
+      // Render Empty Bot Response
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
       botRow.innerHTML = `
@@ -612,65 +757,37 @@
             <span class="thinking-content"></span>
           </div>
           <div class="response-content"></div>
-        </div>
-      `;
-      chatBox.appendChild(botRow);
+        </div>`;
+      elements.chatBox.appendChild(botRow);
 
       const thinkingBlock = botRow.querySelector('.thinking-block');
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
-      chatBox.scrollTop = chatBox.scrollHeight;
+      scrollToBottom();
 
-      abortController = new AbortController();
-      isGenerating = true;
-      const sendBtn = document.getElementById('send-btn');
-      sendBtn.classList.add('stop');
+      // Controller State setup
+      state.abortController = new AbortController();
+      state.isGenerating = true;
+      elements.sendBtn.classList.add('stop');
 
       let fullThinking = '';
       let fullResponse = '';
-      let isInsideThinkTag = false;
-
-      // Get user's current date, time, and time zone
-      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
-      const clientTimeFormatted = new Date().toLocaleString([], {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      });
-
-      // Construct system prompt containing temporal & spatial context
-      let systemPromptText = `User Current Date & Time: ${clientTimeFormatted}\nUser Time Zone: ${userTimeZone}`;
-      if (userCoordinates) {
-        systemPromptText += `\nUser Coordinates: ${userCoordinates.latitude}, ${userCoordinates.longitude}`;
-      }
-
-      // Prepend system prompt message to array
-      const payloadMessages = [
-        { role: 'system', content: systemPromptText },
-        ...session.messages.map(m => ({ role: m.role, content: m.content }))
-      ];
 
       try {
-        const response = await fetch(`${baseUrl}/api/chat`, {
+        const response = await fetch(`${CONFIG.baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: modelName,
-            messages: payloadMessages,
-            options: {
-              think: enableThinking
-            },
-            search: enableSearch,
+            model: CONFIG.modelName,
+            messages: session.messages.map(m => ({ role: m.role, content: m.content })),
+            think: state.enableThinking,
+            search: state.enableSearch,
             stream: true
           }),
-          signal: abortController.signal
+          signal: state.abortController.signal
         });
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -682,74 +799,52 @@
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop();
+          buffer = lines.pop(); // Retain unfinished chunk line
 
           for (const line of lines) {
             if (!line.trim()) continue;
             try {
               const parsed = JSON.parse(line);
-              let token = parsed.message?.content || '';
 
-              // Support for standard Ollama thinking field
-              if (parsed.message?.thinking && enableThinking) {
+              if (parsed.message?.thinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
                 thinkingContent.textContent = fullThinking;
               }
 
-              // Handle raw <think> tags inline if present in token stream
-              if (token.includes('<think>')) {
-                isInsideThinkTag = true;
-                token = token.replace('<think>', '');
-              }
-
-              if (token.includes('</think>')) {
-                isInsideThinkTag = false;
-                token = token.replace('</think>', '');
-              }
-
-              if (isInsideThinkTag) {
-                if (enableThinking) {
-                  fullThinking += token;
-                  thinkingBlock.style.display = 'block';
-                  thinkingContent.textContent = fullThinking;
-                }
-              } else if (token) {
-                fullResponse += token;
-                responseContent.textContent = fullResponse;
+              if (parsed.message?.content) {
+                fullResponse += parsed.message.content;
+                responseContent.innerHTML = marked.parse(fullResponse);
               }
 
               if (parsed.done) {
-                totalTokens += (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
+                state.totalTokens += (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                 updateTotalTokensDisplay();
               }
-              chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (err) {}
+              scrollToBottom();
+            } catch (err) {
+              // Ignore partial chunk parse failures
+            }
           }
         }
 
-        session.messages.push({
-          role: 'assistant',
-          content: fullResponse,
-          thinking: enableThinking ? fullThinking : ''
-        });
-        localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+        session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
+        saveSessions();
 
       } catch (err) {
         if (err.name !== 'AbortError') {
-          responseContent.textContent = `Error connecting to model: ${err.message}`;
+          responseContent.textContent = `Error: ${err.message}`;
           responseContent.style.color = 'var(--danger-color)';
         }
       } finally {
-        isGenerating = false;
-        sendBtn.classList.remove('stop');
-        abortController = null;
+        state.isGenerating = false;
+        elements.sendBtn.classList.remove('stop');
+        state.abortController = null;
       }
     }
 
-    updateTotalTokensDisplay();
-    if (sessions.length === 0) startNewChat();
-    else { currentSessionId = sessions[0].id; renderSidebar(); renderCurrentChat(); }
+    // Start App
+    init();
   </script>
 </body>
 </html>
