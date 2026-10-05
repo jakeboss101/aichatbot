@@ -319,31 +319,36 @@
       border-color: var(--accent-color);
     }
 
+    /* Input Controls & Toggle Sizing */
     .input-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding-right: 8px;
+      gap: 12px;
+      padding-right: 10px;
       border-right: 1px solid var(--border-color);
     }
 
     .control-group {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      cursor: pointer;
     }
 
     .toggle-text {
-      font-size: 0.7rem;
+      font-size: 0.85rem;
       font-weight: 600;
       color: var(--text-muted);
+      user-select: none;
     }
 
+    /* Larger Toggle Switches */
     .switch {
       position: relative;
       display: inline-block;
-      width: 28px;
-      height: 16px;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
     }
 
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -353,15 +358,15 @@
       cursor: pointer;
       inset: 0;
       background-color: var(--border-color);
-      border-radius: 20px;
+      border-radius: 24px;
       transition: .2s;
     }
 
     .slider:before {
       position: absolute;
       content: "";
-      height: 10px;
-      width: 10px;
+      height: 18px;
+      width: 18px;
       left: 3px;
       bottom: 3px;
       background-color: white;
@@ -370,7 +375,7 @@
     }
 
     input:checked + .slider { background-color: var(--accent-color); }
-    input:checked + .slider:before { transform: translateX(12px); background-color: #0f172a; }
+    input:checked + .slider:before { transform: translateX(20px); background-color: #0f172a; }
 
     textarea {
       flex: 1;
@@ -397,6 +402,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .send-btn.stop { background: var(--danger-color); color: #ffffff; }
@@ -411,7 +417,6 @@
         transform: translateX(-100%);
       }
       .sidebar.open { transform: translateX(0); }
-      .toggle-text { display: none; }
     }
   </style>
 </head>
@@ -443,20 +448,20 @@
     <div class="input-wrapper">
       <div class="input-card">
         <div class="input-controls">
-          <div class="control-group">
+          <label class="control-group">
             <span class="toggle-text">Think</span>
-            <label class="switch">
+            <span class="switch">
               <input type="checkbox" id="thinking-toggle" onchange="enableThinking = this.checked; localStorage.setItem('jakeboss_enable_thinking', enableThinking);">
               <span class="slider"></span>
-            </label>
-          </div>
-          <div class="control-group">
+            </span>
+          </label>
+          <label class="control-group">
             <span class="toggle-text">Web</span>
-            <label class="switch">
+            <span class="switch">
               <input type="checkbox" id="search-toggle" onchange="enableSearch = this.checked; localStorage.setItem('jakeboss_enable_search', enableSearch);">
               <span class="slider"></span>
-            </label>
-          </div>
+            </span>
+          </label>
         </div>
         <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSendClick();}"></textarea>
         <button id="send-btn" class="send-btn" onclick="handleSendClick()">
