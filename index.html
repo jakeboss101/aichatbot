@@ -574,7 +574,7 @@
       </div>
     </div>
 
-    <div class="app-version">v1.0</div>
+    <div class="app-version">v1.1</div>
   </div>
 
   <script>
@@ -816,6 +816,31 @@
       }
     }
 
+    async function fetchWebSearchResults(query, signal) {
+      try {
+        const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+        const res = await fetch(url, { signal });
+        if (!res.ok) return '';
+        const data = await res.json();
+        let results = [];
+
+        if (data.AbstractText) {
+          results.push(`Abstract: ${data.AbstractText}`);
+        }
+
+        if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
+          for (const item of data.RelatedTopics.slice(0, 5)) {
+            if (item.Text) results.push(`• ${item.Text}`);
+          }
+        }
+
+        return results.join('\n');
+      } catch (err) {
+        console.warn('Web search lookup failed or aborted:', err);
+        return '';
+      }
+    }
+
     async function sendMessage(prompt) {
       const inputEl = document.getElementById('user-input');
       const chatBox = document.getElementById('chat-box');
@@ -851,7 +876,7 @@
             <div class="thinking-label">Thinking...</div>
             <span class="thinking-content"></span>
           </div>
-          <div class="response-content">...</div>
+          <div class="response-content">${enableSearch ? 'Searching the web...' : '...'}</div>
         </div>
       `;
       chatBox.appendChild(botRow);
@@ -869,20 +894,28 @@
       let fullResponse = '';
 
       try {
+        let webContext = '';
+        if (enableSearch) {
+          webContext = await fetchWebSearchResults(prompt, abortController.signal);
+        }
+
         let apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
         
-        if (!enableThinking) {
-          apiMessages.unshift({
-            role: 'system',
-            content: 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.'
-          });
+        let systemPrompt = '';
+        if (webContext) {
+          systemPrompt = `Use the following real-time web search results to directly answer the user's latest query accurately. If relevant, cite information from these results.\n\n[WEB SEARCH RESULTS]\n${webContext}`;
+        } else if (!enableThinking) {
+          systemPrompt = 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.';
+        }
+
+        if (systemPrompt) {
+          apiMessages.unshift({ role: 'system', content: systemPrompt });
         }
 
         const requestBody = {
           model: modelName,
           messages: apiMessages,
-          think: enableThinking,
-          web_search: enableSearch,
+          think: enableSearch ? false : enableThinking,
           stream: true
         };
 
@@ -913,7 +946,7 @@
             try {
               const parsed = JSON.parse(trimmed);
 
-              if (enableThinking && parsed.message && parsed.message.thinking) {
+              if (enableThinking && !enableSearch && parsed.message && parsed.message.thinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
                 thinkingContent.textContent = fullThinking;
@@ -940,7 +973,7 @@
         if (streamBuffer.trim()) {
           try {
             const parsed = JSON.parse(streamBuffer.trim());
-            if (enableThinking && parsed.message && parsed.message.thinking) {
+            if (enableThinking && !enableSearch && parsed.message && parsed.message.thinking) {
               fullThinking += parsed.message.thinking;
             }
             if (parsed.message && parsed.message.content) {
@@ -960,7 +993,7 @@
         session.messages.push({
           role: 'assistant',
           content: fullResponse,
-          thinking: enableThinking ? fullThinking : ''
+          thinking: (enableThinking && !enableSearch) ? fullThinking : ''
         });
         saveSessions();
 
@@ -970,7 +1003,7 @@
             session.messages.push({
               role: 'assistant',
               content: fullResponse + " [Interrupted]",
-              thinking: enableThinking ? fullThinking : ''
+              thinking: (enableThinking && !enableSearch) ? fullThinking : ''
             });
             saveSessions();
           } else {
