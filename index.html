@@ -477,20 +477,69 @@
     let currentSessionId = null;
     let abortController = null;
     let isGenerating = false;
-    let userScrolledUp = false;
+    let userIsScrolling = false;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
     document.getElementById('search-toggle').checked = enableSearch;
 
     const chatBoxEl = document.getElementById('chat-box');
-    chatBoxEl.addEventListener('scroll', () => {
-      const threshold = 50;
-      const isAtBottom = chatBoxEl.scrollHeight - chatBoxEl.scrollTop - chatBoxEl.clientHeight <= threshold;
-      userScrolledUp = !isAtBottom;
-    });
+
+    // Floating "Scroll to Bottom" button
+    const scrollBottomBtn = document.createElement('button');
+    scrollBottomBtn.id = 'scroll-bottom-btn';
+    scrollBottomBtn.innerHTML = '↓ Scroll to bottom';
+    scrollBottomBtn.style.cssText = `
+      position: fixed;
+      bottom: 80px;
+      right: 50%;
+      transform: translateX(50%);
+      background: var(--input-bg);
+      color: var(--accent-color);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      z-index: 20;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    `;
+    scrollBottomBtn.onclick = () => {
+      userIsScrolling = false;
+      chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
+      scrollBottomBtn.style.display = 'none';
+    };
+    document.body.appendChild(scrollBottomBtn);
+
+    function isAtBottom() {
+      const threshold = 30;
+      return Math.ceil(chatBoxEl.scrollTop + chatBoxEl.clientHeight) >= chatBoxEl.scrollHeight - threshold;
+    }
+
+    function handleUserScrollIntent() {
+      if (!isAtBottom()) {
+        userIsScrolling = true;
+        if (isGenerating) scrollBottomBtn.style.display = 'block';
+      } else {
+        userIsScrolling = false;
+        scrollBottomBtn.style.display = 'none';
+      }
+    }
+
+    chatBoxEl.addEventListener('scroll', handleUserScrollIntent, { passive: true });
+    chatBoxEl.addEventListener('wheel', (e) => {
+      if (e.deltaY < 0) {
+        userIsScrolling = true;
+        if (isGenerating) scrollBottomBtn.style.display = 'block';
+      }
+    }, { passive: true });
+    chatBoxEl.addEventListener('touchstart', () => {
+      userIsScrolling = true;
+    }, { passive: true });
 
     function scrollToBottomIfNeeded() {
-      if (!userScrolledUp) {
+      if (!userIsScrolling) {
         chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
       }
     }
@@ -564,7 +613,8 @@
         }
         chatBoxEl.appendChild(row);
       });
-      userScrolledUp = false;
+      userIsScrolling = false;
+      scrollBottomBtn.style.display = 'none';
       chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
     }
 
@@ -653,7 +703,8 @@
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
 
-      userScrolledUp = false;
+      userIsScrolling = false;
+      scrollBottomBtn.style.display = 'none';
       chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
 
       abortController = new AbortController();
@@ -744,6 +795,7 @@
       } finally {
         isGenerating = false;
         sendBtn.classList.remove('stop');
+        scrollBottomBtn.style.display = 'none';
         abortController = null;
       }
     }
