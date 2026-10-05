@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Jake - AI</title>
+  <title>Jake - AI (Jan Tools Enabled)</title>
 
   <!-- Marked.js for Markdown & Prism.js for Syntax Highlighting -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -478,7 +478,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v2.0-search</div>
+  <div class="version-tag">v3.0-jan-tools</div>
 
   <!-- ========================================== -->
   <!--               JAVASCRIPT                   -->
@@ -491,17 +491,21 @@
     const MAX_CONTEXT_CHARS = 24000;
     const selectedModel = "jan3.5";
 
-    const SYSTEM_PROMPT = `You are Jake, a helpful AI assistant. Always respond directly, clearly, and concisely.
+    const SYSTEM_PROMPT = `You are Jake, an AI assistant with access to real-time tools.
 
 IDENTITY RULES:
 - When asked about your identity or model, respond with: "I am Jake, an AI assistant. How can I help you?"
 - Never mention underlying models (Menlo Research, Jan, LLaMA, Mistral, OpenAI).
 
+TOOLS AVAILABLE:
+- web_search: Use this to search the web whenever real-time data, stock/crypto prices, news, or current information is required.
+- web_fetch: Use this to read the contents of a specific web URL if more details are needed from search results.
+
 CODING RULES:
 - ALWAYS ask the user for confirmation and clarify requirements BEFORE generating or writing any code. Do not output code immediately upon request without asking first.
 
 CONCISENESS RULES:
-- Keep answers strictly direct and under 100 words. Avoid fluff.`;
+- Keep answers strictly direct and concise. Avoid fluff.`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
@@ -513,30 +517,73 @@ CONCISENESS RULES:
     const textarea = document.getElementById('user-input');
 
     // ==========================================
-    // JS: WEB SEARCH HELPER
+    // JAN AI TOOLS: WEB_SEARCH & WEB_FETCH
     // ==========================================
-    async function fetchWebSearchResults(query) {
+
+    // 1. Tool Schemas
+    const JAN_TOOLS = [
+      {
+        type: "function",
+        function: {
+          name: "web_search",
+          description: "Search the web for real-time information, live market prices, news, or current events.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "The search query string" }
+            },
+            required: ["query"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "web_fetch",
+          description: "Fetch and extract text content from a specific URL.",
+          parameters: {
+            type: "object",
+            properties: {
+              url: { type: "string", description: "The full HTTP/HTTPS URL to fetch" }
+            },
+            required: ["url"]
+          }
+        }
+      }
+    ];
+
+    // 2. Execution logic for web_search (SearXNG Public JSON API)
+    async function executeWebSearch(query) {
       try {
-        const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
-        if (!response.ok) return null;
-        
-        const data = await response.json();
-        let snippets = [];
+        const res = await fetch(`https://searx.be/search?q=${encodeURIComponent(query)}&format=json`);
+        if (!res.ok) return "Search request failed.";
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) return "No results found.";
 
-        if (data.AbstractText) {
-          snippets.push(`Abstract: ${data.AbstractText}`);
-        }
-
-        if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-          data.RelatedTopics.slice(0, 3).forEach(item => {
-            if (item.Text) snippets.push(`- ${item.Text}`);
-          });
-        }
-
-        return snippets.length > 0 ? snippets.join('\n') : null;
+        return data.results.slice(0, 4).map((r, i) => 
+          `[Result ${i + 1}]\nTitle: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}`
+        ).join("\n\n");
       } catch (err) {
-        console.error('Search error:', err);
-        return null;
+        return `Search error: ${err.message}`;
+      }
+    }
+
+    // 3. Execution logic for web_fetch (CORS Proxy + DOM Text Extraction)
+    async function executeWebFetch(url) {
+      try {
+        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        if (!res.ok) return "Failed to fetch web page.";
+        const data = await res.json();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, 'text/html');
+        doc.querySelectorAll('script, style, svg, nav, footer, header').forEach(el => el.remove());
+        
+        const pageText = doc.body.textContent || "";
+        const cleanedText = pageText.replace(/\s+/g, ' ').trim();
+        return cleanedText.length > 3000 ? cleanedText.substring(0, 3000) + "...\n(content truncated)" : cleanedText;
+      } catch (err) {
+        return `Fetch error: ${err.message}`;
       }
     }
 
@@ -746,17 +793,18 @@ CONCISENESS RULES:
       if (!session || session.messages.length === 0) { updateOverallTokenStats(); return; }
 
       session.messages.forEach((msg) => {
+        if (msg.role === 'tool') return; // Skip raw tool results in visual chat history
         const row = document.createElement('div');
         row.className = 'message-row';
         if (msg.role === 'user') {
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
-        } else {
+        } else if (msg.role === 'assistant' && msg.content) {
           let speedTagHtml = msg.speed ? `<div class="token-speed-tag">⚡ ${msg.speed}</div>` : '';
           row.innerHTML = `<div class="message bot"><div class="response-content"></div>${speedTagHtml}</div>`;
           row.querySelector('.response-content').innerHTML = marked.parse(msg.content);
         }
-        chatBox.appendChild(row);
+        if (row.innerHTML) chatBox.appendChild(row);
       });
 
       Prism.highlightAll();
@@ -765,13 +813,13 @@ CONCISENESS RULES:
     }
 
     // ==========================================
-    // JS: API INTERACTION & MESSAGE HANDLING
+    // JS: TOOL-AWARE MESSAGE HANDLING LOOP
     // ==========================================
     function getBoundedMessages(messages) {
       let totalChars = 0;
       let bounded = [];
       for (let i = messages.length - 1; i >= 0; i--) {
-        const msgLen = messages[i].content.length;
+        const msgLen = (messages[i].content || '').length;
         if (totalChars + msgLen > MAX_CONTEXT_CHARS && bounded.length > 0) break;
         bounded.unshift(messages[i]);
         totalChars += msgLen;
@@ -806,7 +854,7 @@ CONCISENESS RULES:
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">🔍 Searching web & thinking...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">Thinking...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
@@ -819,84 +867,110 @@ CONCISENESS RULES:
       let fullResponse = '';
 
       try {
-        const searchSnippets = await fetchWebSearchResults(prompt);
-
-        let dynamicSystemPrompt = SYSTEM_PROMPT;
-        if (searchSnippets) {
-          dynamicSystemPrompt += `\n\nWEB SEARCH RESULTS FOR CONTEXT:\n${searchSnippets}\n\nUse the above results if relevant to answer accurately.`;
-        }
-
-        const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
-        
-        const apiMessages = [
-          { role: 'system', content: dynamicSystemPrompt },
-          ...baseMessages
+        let apiMessages = [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...getBoundedMessages(session.messages).map(m => ({
+            role: m.role,
+            content: m.content || '',
+            name: m.name,
+            tool_calls: m.tool_calls
+          }))
         ];
 
-        const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
+        // STEP 1: INITIAL MODEL CALL WITH TOOLS AVAILABLE
+        let response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: selectedModel,
             messages: apiMessages,
-            stream: true,
-            options: {
-              temperature: 0.7,
-              top_p: 0.9
-            }
+            tools: JAN_TOOLS,
+            stream: false
           }),
           signal: activeController.signal
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        let data = await response.json();
+        let assistantMsg = data.message;
 
-        responseContent.textContent = '';
+        // STEP 2: HANDLE TOOL CALLS (web_search OR web_fetch)
+        if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
+          apiMessages.push(assistantMsg);
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let streamBuffer = '';
+          for (const call of assistantMsg.tool_calls) {
+            const fnName = call.function.name;
+            const fnArgs = typeof call.function.arguments === 'string' 
+              ? JSON.parse(call.function.arguments) 
+              : call.function.arguments;
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+            let toolOutput = "";
 
-          streamBuffer += decoder.decode(value, { stream: true });
-          const lines = streamBuffer.split('\n');
-          streamBuffer = lines.pop();
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-            try {
-              const parsed = JSON.parse(trimmed);
-              if (parsed.message && parsed.message.content) {
-                const chunk = parsed.message.content;
-                fullResponse += chunk;
-                
-                const chunkTokens = Math.ceil(chunk.length / 4);
-                generatedTokenCount += chunkTokens;
-                lifetimeTokens += chunkTokens;
-                updateOverallTokenStats();
-
-                responseContent.innerHTML = marked.parse(fullResponse);
-                Prism.highlightAllUnder(responseContent);
-                
-                if (!userScrolledUp) scrollToBottom();
-              }
-            } catch (e) {}
-          }
-        }
-
-        if (streamBuffer.trim()) {
-          try {
-            const parsed = JSON.parse(streamBuffer.trim());
-            if (parsed.message && parsed.message.content) {
-              fullResponse += parsed.message.content;
-              responseContent.innerHTML = marked.parse(fullResponse);
-              Prism.highlightAllUnder(responseContent);
-              if (!userScrolledUp) scrollToBottom();
+            if (fnName === "web_search") {
+              responseContent.textContent = `🔍 Searching web for "${fnArgs.query}"...`;
+              toolOutput = await executeWebSearch(fnArgs.query);
+            } else if (fnName === "web_fetch") {
+              responseContent.textContent = `🌐 Reading web page "${fnArgs.url}"...`;
+              toolOutput = await executeWebFetch(fnArgs.url);
             }
-          } catch (e) {}
+
+            apiMessages.push({
+              role: 'tool',
+              content: toolOutput,
+              name: fnName
+            });
+          }
+
+          // STEP 3: STREAM FINAL ANSWER USING RETRIEVED TOOL DATA
+          responseContent.textContent = '';
+          const finalRes = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: selectedModel,
+              messages: apiMessages,
+              stream: true
+            }),
+            signal: activeController.signal
+          });
+
+          const reader = finalRes.body.getReader();
+          const decoder = new TextDecoder();
+          let streamBuffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            streamBuffer += decoder.decode(value, { stream: true });
+            const lines = streamBuffer.split('\n');
+            streamBuffer = lines.pop();
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              try {
+                const parsed = JSON.parse(trimmed);
+                if (parsed.message && parsed.message.content) {
+                  const chunk = parsed.message.content;
+                  fullResponse += chunk;
+                  
+                  generatedTokenCount += Math.ceil(chunk.length / 4);
+                  lifetimeTokens += Math.ceil(chunk.length / 4);
+                  updateOverallTokenStats();
+
+                  responseContent.innerHTML = marked.parse(fullResponse);
+                  Prism.highlightAllUnder(responseContent);
+                  if (!userScrolledUp) scrollToBottom();
+                }
+              } catch (e) {}
+            }
+          }
+        } else {
+          // Direct response without tools
+          fullResponse = assistantMsg.content || '';
+          responseContent.innerHTML = marked.parse(fullResponse);
+          Prism.highlightAllUnder(responseContent);
         }
 
         const durationSec = (performance.now() - startTime) / 1000;
@@ -918,7 +992,7 @@ CONCISENESS RULES:
             saveSessions();
           } else { botRow.remove(); }
         } else {
-          responseContent.textContent = `Connection error: ${err.message}. Check your TUNNEL_BASE_URL.`;
+          responseContent.textContent = `Error: ${err.message}`;
           responseContent.style.color = '#ef4444';
         }
       } finally {
