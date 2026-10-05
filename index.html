@@ -584,11 +584,17 @@
 
     document.getElementById('thinking-toggle').checked = enableThinking;
 
-    const textarea = document.getElementById('user-input');
-    textarea.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    });
+    function getInputElement() {
+      return document.getElementById('user-input') || document.getElementById('user-prompt');
+    }
+
+    const textarea = getInputElement();
+    if (textarea) {
+      textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      });
+    }
 
     function toggleThinkingSetting(value) {
       enableThinking = value;
@@ -785,8 +791,8 @@
     }
 
     function handleSendClick() {
-      const inputEl = document.getElementById('user-input');
-      const prompt = inputEl.value.trim();
+      const inputEl = getInputElement();
+      const prompt = inputEl ? inputEl.value.trim() : "";
 
       if (isGenerating) {
         if (abortController) {
@@ -803,7 +809,7 @@
     }
 
     async function sendMessage(prompt) {
-      const inputEl = document.getElementById('user-input');
+      const inputEl = getInputElement();
       const chatBox = document.getElementById('chat-box');
 
       if (!currentSessionId) {
@@ -826,8 +832,10 @@
       userRow.querySelector('.message').textContent = prompt;
       chatBox.appendChild(userRow);
 
-      inputEl.value = '';
-      inputEl.style.height = '28px';
+      if (inputEl) {
+        inputEl.value = '';
+        inputEl.style.height = '28px';
+      }
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
