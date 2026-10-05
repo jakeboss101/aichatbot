@@ -1,317 +1,1034 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qwen Web Search Assistant</title>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --chat-bg: #1e1e1e;
-            --user-msg: #2b5278;
-            --bot-msg: #2d2d2d;
-            --text-color: #e0e0e0;
-            --accent-color: #4da6ff;
-            --border-color: #333;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>JakeBoss AI Assistant</title>
+  <style>
+    :root {
+      --bg-color: #0e1117;
+      --panel-bg: #161b22;
+      --border-color: #262c36;
+      --user-msg: #1e293b;
+      --bot-msg: transparent;
+      --accent-color: #38bdf8;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-thinking: #6b7280;
+      --input-bg: #1e2430;
+      --danger-color: #ef4444;
+      --sidebar-width: 200px;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            height: 100vh;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        .chat-container {
-            width: 100%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            border-left: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      position: relative;
+    }
 
-        .header {
-            padding: 15px 20px;
-            background-color: var(--chat-bg);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 25;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
 
-        .header h2 {
-            margin: 0;
-            font-size: 1.1rem;
-        }
+    .sidebar-overlay.active {
+      display: block;
+      opacity: 1;
+    }
 
-        .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+    .sidebar {
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
+      height: 100%;
+      background-color: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 12px;
+      z-index: 30;
+      transition: transform 0.25s ease;
+    }
 
-        .message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 8px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
+    .new-chat-btn {
+      width: 100%;
+      background-color: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.1s, opacity 0.2s;
+    }
 
-        .message.user {
-            align-self: flex-end;
-            background-color: var(--user-msg);
-        }
+    .new-chat-btn:active {
+      transform: scale(0.98);
+    }
 
-        .message.assistant {
-            align-self: flex-start;
-            background-color: var(--bot-msg);
-        }
+    .chat-history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
 
-        .controls {
-            padding: 15px 20px;
-            background-color: var(--chat-bg);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+    .history-item {
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
 
-        .options-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-        }
+    .history-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
 
-        .search-toggle {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
+    .history-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
 
-        .input-group {
-            display: flex;
-            gap: 10px;
-        }
+    .history-item.active {
+      background-color: var(--input-bg);
+      color: var(--accent-color);
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+    }
 
-        textarea {
-            flex: 1;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px;
-            resize: none;
-            height: 40px;
-            font-family: inherit;
-        }
+    .delete-chat-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      border-radius: 4px;
+      opacity: 0.6;
+      transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+    }
 
-        textarea:focus {
-            outline: 1px solid var(--accent-color);
-        }
+    .history-item:hover .delete-chat-btn {
+      opacity: 1;
+    }
 
-        button {
-            background-color: var(--accent-color);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 0 20px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+    .delete-chat-btn:hover {
+      color: var(--danger-color);
+      background-color: rgba(239, 68, 68, 0.15);
+    }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+    .delete-all-btn {
+      width: 100%;
+      background: transparent;
+      color: var(--danger-color);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
 
-        .status-indicator {
-            font-size: 0.8rem;
-            color: #888;
-            font-style: italic;
-        }
-    </style>
+    .delete-all-btn:hover {
+      background-color: rgba(239, 68, 68, 0.12);
+      border-color: var(--danger-color);
+    }
+
+    .sidebar-footer {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .app-container {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-color);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      position: relative;
+    }
+
+    header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: rgba(14, 17, 23, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-toggle-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+    }
+
+    .glow-name {
+      color: var(--accent-color);
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    .token-counter {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background-color: var(--input-bg);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .token-counter span {
+      color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    .app-version {
+      position: absolute;
+      bottom: 6px;
+      right: 12px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+      max-width: 850px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .message-row {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 16px 20px;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: var(--user-msg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 20px 20px 4px 20px;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background-color: var(--bot-msg);
+      color: var(--text-main);
+      border-radius: 20px 20px 20px 4px;
+      padding-left: 0;
+    }
+
+    .thinking-block {
+      color: var(--text-thinking);
+      font-style: italic;
+      font-size: 0.95rem;
+      border-left: 3px solid var(--border-color);
+      padding-left: 12px;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .thinking-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-style: normal;
+    }
+
+    .input-wrapper {
+      padding: 12px 16px 16px 16px;
+      background-color: var(--bg-color);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .input-card {
+      max-width: 850px;
+      margin: 0 auto;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 28px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-card:focus-within {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    }
+
+    .input-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 8px;
+      border-right: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .input-toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .toggle-text {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 18px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--border-color);
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-color);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(14px);
+      background-color: #0f172a;
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      resize: none;
+      max-height: 120px;
+      height: 28px;
+      line-height: 1.4;
+    }
+
+    textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent-color);
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+    }
+
+    .send-btn:active {
+      transform: scale(0.92);
+    }
+
+    .send-btn.stop {
+      background: var(--danger-color);
+      color: #ffffff;
+    }
+
+    .send-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle-btn {
+        display: flex;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 240px;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.4);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .message {
+        font-size: 0.95rem;
+        padding: 12px 14px;
+      }
+
+      h1 {
+        font-size: 0.95rem;
+      }
+
+      .toggle-text {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
 
-<div class="chat-container">
-    <div class="header">
-        <h2>Qwen Search Chat</h2>
-        <div id="status" class="status-indicator">Ready</div>
-    </div>
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
-    <div class="messages-container" id="messages"></div>
+  <aside id="sidebar" class="sidebar">
+    <button class="new-chat-btn" onclick="startNewChat()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      New Chat
+    </button>
 
-    <div class="controls">
-        <div class="options-bar">
-            <label class="search-toggle" title="Enable live DuckDuckGo web search">
-                <input type="checkbox" id="search-enable-checkbox" checked>
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">🌐 Search</span>
+    <div id="chat-history-list" class="chat-history-list"></div>
+
+    <button id="delete-all-btn" class="delete-all-btn" onclick="deleteAllChats()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      Delete All Chats
+    </button>
+
+    <div class="sidebar-footer">JakeBoss AI</div>
+  </aside>
+
+  <div class="app-container">
+    <header>
+      <div class="header-left">
+        <button class="menu-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle Navigation">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <div class="brand">
+          <div class="brand-icon"></div>
+          <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
+        </div>
+      </div>
+      <div class="token-counter">
+        Tokens: <span id="total-tokens">0</span>
+      </div>
+    </header>
+
+    <div id="chat-box"></div>
+
+    <div class="input-wrapper">
+      <div class="input-card">
+        <div class="input-controls">
+          <div class="input-toggle-item" title="Toggle Reasoning / Thinking">
+            <span class="toggle-text">Think</span>
+            <label class="switch">
+              <input type="checkbox" id="thinking-toggle" onchange="toggleThinkingSetting(this.checked)">
+              <span class="slider"></span>
             </label>
+          </div>
+          <div class="input-toggle-item" title="Toggle Web Search">
+            <span class="toggle-text">Search</span>
+            <label class="switch">
+              <input type="checkbox" id="search-toggle" onchange="toggleSearchSetting(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
-        <div class="input-group">
-            <textarea id="promptInput" placeholder="Type a message..." rows="1"></textarea>
-            <button id="sendBtn" onclick="sendMessage()">Send</button>
-        </div>
+
+        <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+        
+        <button id="send-btn" class="send-btn" onclick="handleSendClick()">
+          <svg id="send-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
     </div>
-</div>
 
-<script>
-    const OLLAMA_ENDPOINT = 'http://localhost:11434/api/chat';
-    const MODEL_NAME = 'qwen2.5';
+    <div class="app-version">v1.1</div>
+  </div>
 
-    let conversationHistory = [];
-    let currentAbortController = null;
+  <script>
+    const baseUrl = "https://remote-basis-avatar-mpeg.trycloudflare.com";
+    const modelName = "qwen3.5:4b";
 
-    async function searchDuckDuckGo(query) {
-        try {
-            const proxyUrl = "https://api.allorigins.win/get?url=";
-            const targetUrl = encodeURIComponent(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000);
+    let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
+    let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
+    let enableThinking = JSON.parse(localStorage.getItem('jakeboss_enable_thinking') ?? 'false');
+    let enableSearch = JSON.parse(localStorage.getItem('jakeboss_enable_search') ?? 'false');
+    let currentSessionId = null;
 
-            const res = await fetch(proxyUrl + targetUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            const data = await res.json();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(data.contents, 'text/html');
-            const snippets = Array.from(doc.querySelectorAll('.result__snippet'))
-                .slice(0, 3)
-                .map(el => el.textContent.trim())
-                .filter(text => text.length > 0);
-            
-            return snippets.length > 0 ? snippets.join('\n- ') : '';
-        } catch (err) {
-            console.warn("Search bypassed or failed:", err);
-            return "";
-        }
-    }
+    let abortController = null;
+    let isGenerating = false;
 
-    async function sendMessage() {
-        const inputEl = document.getElementById('promptInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const isSearchEnabled = document.getElementById('search-enable-checkbox').checked;
-        const statusEl = document.getElementById('status');
-        const prompt = inputEl.value.trim();
+    document.getElementById('thinking-toggle').checked = enableThinking;
+    document.getElementById('search-toggle').checked = enableSearch;
 
-        if (!prompt) return;
-
-        inputEl.value = '';
-        sendBtn.disabled = true;
-
-        appendMessage('user', prompt);
-        conversationHistory.push({ role: 'user', content: prompt });
-
-        const assistantMsgEl = appendMessage('assistant', '');
-        currentAbortController = new AbortController();
-
-        try {
-            let apiMessages = [...conversationHistory];
-            let webContext = "";
-
-            if (isSearchEnabled) {
-                statusEl.textContent = '🔍 Searching web...';
-                webContext = await searchDuckDuckGo(prompt);
-                
-                if (webContext) {
-                    const systemContext = {
-                        role: 'system',
-                        content: `Live Web Search Results:\n- ${webContext}\n\nUse the above context if relevant.`
-                    };
-                    apiMessages.unshift(systemContext);
-                }
-            }
-
-            statusEl.textContent = 'Thinking...';
-
-            const response = await fetch(OLLAMA_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: currentAbortController.signal,
-                body: JSON.stringify({
-                    model: MODEL_NAME,
-                    messages: apiMessages,
-                    stream: true
-                })
-            });
-
-            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullText = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
-
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    try {
-                        const json = JSON.parse(line);
-                        if (json.message?.content) {
-                            fullText += json.message.content;
-                            assistantMsgEl.textContent = fullText;
-                            scrollToBottom();
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse JSON stream chunk:', e);
-                    }
-                }
-            }
-
-            conversationHistory.push({ role: 'assistant', content: fullText });
-
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                assistantMsgEl.textContent = `[Error: ${err.message}]`;
-            }
-        } finally {
-            statusEl.textContent = 'Ready';
-            sendBtn.disabled = false;
-            currentAbortController = null;
-        }
-    }
-
-    function appendMessage(role, text) {
-        const container = document.getElementById('messages');
-        const msg = document.createElement('div');
-        msg.className = `message ${role}`;
-        msg.textContent = text;
-        container.appendChild(msg);
-        scrollToBottom();
-        return msg;
-    }
-
-    function scrollToBottom() {
-        const container = document.getElementById('messages');
-        container.scrollTop = container.scrollHeight;
-    }
-
-    document.getElementById('promptInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
+    const textarea = document.getElementById('user-input');
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
-</script>
 
+    function toggleThinkingSetting(value) {
+      enableThinking = value;
+      localStorage.setItem('jakeboss_enable_thinking', JSON.stringify(enableThinking));
+    }
+
+    function toggleSearchSetting(value) {
+      enableSearch = value;
+      localStorage.setItem('jakeboss_enable_search', JSON.stringify(enableSearch));
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const isOpen = sidebar.classList.contains('open');
+      if (isOpen) {
+        closeSidebar();
+      } else {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+      }
+    }
+
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('active');
+    }
+
+    function saveSessions() {
+      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+    }
+
+    function updateTotalTokensDisplay() {
+      document.getElementById('total-tokens').textContent = totalTokens.toLocaleString();
+      localStorage.setItem('jakeboss_total_tokens', totalTokens.toString());
+    }
+
+    function removeUnusedSessions(keepId = null) {
+      sessions = sessions.filter(s => s.messages.length > 0 || s.id === keepId);
+      saveSessions();
+    }
+
+    function deleteChat(id, event) {
+      event.stopPropagation();
+      sessions = sessions.filter(s => s.id !== id);
+      saveSessions();
+
+      if (currentSessionId === id) {
+        if (sessions.length > 0) {
+          currentSessionId = sessions[0].id;
+        } else {
+          startNewChat();
+          return;
+        }
+      }
+      renderSidebar();
+      renderCurrentChat();
+    }
+
+    function deleteAllChats() {
+      if (sessions.length === 0) return;
+      if (confirm("Are you sure you want to delete all chats?")) {
+        sessions = [];
+        saveSessions();
+        startNewChat();
+      }
+    }
+
+    function renderSidebar() {
+      const historyList = document.getElementById('chat-history-list');
+      const deleteAllBtn = document.getElementById('delete-all-btn');
+      historyList.innerHTML = '';
+
+      if (sessions.length === 0) {
+        deleteAllBtn.style.display = 'none';
+        return;
+      }
+      deleteAllBtn.style.display = 'flex';
+
+      sessions.forEach(session => {
+        const item = document.createElement('div');
+        item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
+        item.onclick = () => switchSession(session.id);
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'history-title';
+        titleEl.textContent = session.title || 'Chat Session';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-chat-btn';
+        deleteBtn.ariaLabel = 'Delete chat';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        deleteBtn.onclick = (e) => deleteChat(session.id, e);
+
+        item.appendChild(titleEl);
+        item.appendChild(deleteBtn);
+        historyList.appendChild(item);
+      });
+    }
+
+    function startNewChat() {
+      if (isGenerating && abortController) {
+        abortController.abort();
+      }
+
+      removeUnusedSessions();
+
+      const newSession = {
+        id: Date.now().toString(),
+        title: 'New Chat',
+        messages: []
+      };
+      sessions.unshift(newSession);
+      currentSessionId = newSession.id;
+      saveSessions();
+      renderSidebar();
+      renderCurrentChat();
+      closeSidebar();
+    }
+
+    function switchSession(id) {
+      if (isGenerating && abortController) {
+        abortController.abort();
+      }
+
+      currentSessionId = id;
+      removeUnusedSessions(currentSessionId);
+      renderSidebar();
+      renderCurrentChat();
+      closeSidebar();
+    }
+
+    function renderCurrentChat() {
+      const chatBox = document.getElementById('chat-box');
+      chatBox.innerHTML = '';
+
+      const session = sessions.find(s => s.id === currentSessionId);
+      if (!session || session.messages.length === 0) {
+        chatBox.innerHTML = `
+          <div class="message-row">
+            <div class="message bot">
+              <div class="response-content">Hello! I am your personal assistant. How can I help you today?</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      session.messages.forEach(msg => {
+        const row = document.createElement('div');
+        row.className = 'message-row';
+        if (msg.role === 'user') {
+          row.innerHTML = `<div class="message user"></div>`;
+          row.querySelector('.message').textContent = msg.content;
+        } else {
+          row.innerHTML = `
+            <div class="message bot">
+              ${msg.thinking ? `
+                <div class="thinking-block">
+                  <div class="thinking-label">Thinking...</div>
+                  <span class="thinking-content">${escapeHtml(msg.thinking)}</span>
+                </div>` : ''}
+              <div class="response-content"></div>
+            </div>
+          `;
+          row.querySelector('.response-content').textContent = msg.content;
+        }
+        chatBox.appendChild(row);
+      });
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSendClick();
+      }
+    }
+
+    function setBtnState(generating) {
+      isGenerating = generating;
+      const sendBtn = document.getElementById('send-btn');
+      const sendIcon = document.getElementById('send-icon');
+
+      if (generating) {
+        sendBtn.classList.add('stop');
+        sendBtn.title = "Stop Generating";
+        sendIcon.innerHTML = `<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>`;
+      } else {
+        sendBtn.classList.remove('stop');
+        sendBtn.title = "Send Message";
+        sendIcon.innerHTML = `<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>`;
+      }
+    }
+
+    function handleSendClick() {
+      const inputEl = document.getElementById('user-input');
+      const prompt = inputEl.value.trim();
+
+      if (isGenerating) {
+        if (abortController) {
+          abortController.abort();
+        }
+        if (prompt) {
+          sendMessage(prompt);
+        }
+      } else {
+        if (prompt) {
+          sendMessage(prompt);
+        }
+      }
+    }
+
+    async function fetchWebSearchResults(query, signal) {
+      try {
+        const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+        const res = await fetch(url, { signal });
+        if (!res.ok) return '';
+        const data = await res.json();
+        let results = [];
+
+        if (data.AbstractText) {
+          results.push(`Abstract: ${data.AbstractText}`);
+        }
+
+        if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
+          for (const item of data.RelatedTopics.slice(0, 5)) {
+            if (item.Text) results.push(`• ${item.Text}`);
+          }
+        }
+
+        return results.join('\n');
+      } catch (err) {
+        console.warn('Web search lookup failed or aborted:', err);
+        return '';
+      }
+    }
+
+    async function sendMessage(prompt) {
+      const inputEl = document.getElementById('user-input');
+      const chatBox = document.getElementById('chat-box');
+
+      if (!currentSessionId) {
+        startNewChat();
+      }
+
+      let session = sessions.find(s => s.id === currentSessionId);
+      
+      if (session.messages.length === 0) {
+        session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
+      }
+
+      session.messages.push({ role: 'user', content: prompt });
+      saveSessions();
+      renderSidebar();
+
+      const userRow = document.createElement('div');
+      userRow.className = 'message-row';
+      userRow.innerHTML = `<div class="message user"></div>`;
+      userRow.querySelector('.message').textContent = prompt;
+      chatBox.appendChild(userRow);
+
+      inputEl.value = '';
+      inputEl.style.height = '28px';
+
+      const botRow = document.createElement('div');
+      botRow.className = 'message-row';
+      botRow.innerHTML = `
+        <div class="message bot">
+          <div class="thinking-block" style="display: none;">
+            <div class="thinking-label">Thinking...</div>
+            <span class="thinking-content"></span>
+          </div>
+          <div class="response-content">${enableSearch ? 'Searching the web...' : '...'}</div>
+        </div>
+      `;
+      chatBox.appendChild(botRow);
+
+      const thinkingBlock = botRow.querySelector('.thinking-block');
+      const thinkingContent = botRow.querySelector('.thinking-content');
+      const responseContent = botRow.querySelector('.response-content');
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      abortController = new AbortController();
+      setBtnState(true);
+
+      let fullThinking = '';
+      let fullResponse = '';
+
+      try {
+        let webContext = '';
+        if (enableSearch) {
+          webContext = await fetchWebSearchResults(prompt, abortController.signal);
+        }
+
+        let apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
+        
+        let systemPrompt = '';
+        if (webContext) {
+          systemPrompt = `Use the following real-time web search results to directly answer the user's latest query accurately. If relevant, cite information from these results.\n\n[WEB SEARCH RESULTS]\n${webContext}`;
+        } else if (!enableThinking) {
+          systemPrompt = 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.';
+        }
+
+        if (systemPrompt) {
+          apiMessages.unshift({ role: 'system', content: systemPrompt });
+        }
+
+        const requestBody = {
+          model: modelName,
+          messages: apiMessages,
+          think: enableSearch ? false : enableThinking,
+          stream: true
+        };
+
+        const response = await fetch(`${baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+          signal: abortController.signal
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamBuffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split('\n');
+          streamBuffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            try {
+              const parsed = JSON.parse(trimmed);
+
+              if (enableThinking && !enableSearch && parsed.message && parsed.message.thinking) {
+                fullThinking += parsed.message.thinking;
+                thinkingBlock.style.display = 'block';
+                thinkingContent.textContent = fullThinking;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+
+              if (parsed.message && parsed.message.content) {
+                if (fullResponse === '') responseContent.textContent = '';
+                fullResponse += parsed.message.content;
+                responseContent.textContent = fullResponse;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+
+              if (parsed.done) {
+                const promptTokens = parsed.prompt_eval_count || 0;
+                const evalTokens = parsed.eval_count || 0;
+                totalTokens += (promptTokens + evalTokens);
+                updateTotalTokensDisplay();
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (streamBuffer.trim()) {
+          try {
+            const parsed = JSON.parse(streamBuffer.trim());
+            if (enableThinking && !enableSearch && parsed.message && parsed.message.thinking) {
+              fullThinking += parsed.message.thinking;
+            }
+            if (parsed.message && parsed.message.content) {
+              if (fullResponse === '') responseContent.textContent = '';
+              fullResponse += parsed.message.content;
+              responseContent.textContent = fullResponse;
+            }
+            if (parsed.done) {
+              const promptTokens = parsed.prompt_eval_count || 0;
+              const evalTokens = parsed.eval_count || 0;
+              totalTokens += (promptTokens + evalTokens);
+              updateTotalTokensDisplay();
+            }
+          } catch (e) {}
+        }
+
+        session.messages.push({
+          role: 'assistant',
+          content: fullResponse,
+          thinking: (enableThinking && !enableSearch) ? fullThinking : ''
+        });
+        saveSessions();
+
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          if (fullResponse || fullThinking) {
+            session.messages.push({
+              role: 'assistant',
+              content: fullResponse + " [Interrupted]",
+              thinking: (enableThinking && !enableSearch) ? fullThinking : ''
+            });
+            saveSessions();
+          } else {
+            botRow.remove();
+          }
+        } else {
+          responseContent.textContent = `Connection error: ${err.message}`;
+          responseContent.style.color = '#ef4444';
+        }
+      } finally {
+        setBtnState(false);
+        abortController = null;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    updateTotalTokensDisplay();
+    if (sessions.length === 0) {
+      startNewChat();
+    } else {
+      currentSessionId = sessions[0].id;
+      removeUnusedSessions(currentSessionId);
+      renderSidebar();
+      renderCurrentChat();
+    }
+  </script>
 </body>
 </html>
