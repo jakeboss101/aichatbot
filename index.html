@@ -478,7 +478,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.6.1</div>
+  <div class="version-tag">v1.6.0</div>
 
   <!-- ========================================== -->
   <!--               JAVASCRIPT                   -->
@@ -491,7 +491,14 @@
     const MAX_CONTEXT_CHARS = 24000;
     const selectedModel = "jan3.5";
 
-    const SYSTEM_PROMPT = `You are Jake, a concise hybrid AI for code and creativity. Zero fluff. Complete code/answers only. No filler text.`;
+    const SYSTEM_PROMPT = `You are a high-tier hybrid AI named Jake, equally adept at deep technical engineering and lateral creative thinking. Be extremely concise.
+
+EXECUTION RULES:
+- ADAPTABILITY: For code or math, become a ruthless, zero-fluff engineer. Deliver complete, production-ready code.
+- CREATIVITY: For ideation or writing, be original and avoid predictable tropes.
+- VOICE: Direct, casual, self-aware. Never use generic filler like "As an AI" or "I'd be happy to."
+- CLARITY: State assumptions immediately if a request is ambiguous.
+- CONCISENESS: Get straight to the point. No introductory fluff.`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
@@ -506,7 +513,12 @@
     // JS: MARKDOWN & SYNTAX HIGHLIGHTING
     // ==========================================
     function escapeHtml(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     const renderer = new marked.Renderer();
@@ -514,13 +526,18 @@
       const code = (typeof token === 'object' ? token.text : token) || '';
       const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
       const base64Code = btoa(unescape(encodeURIComponent(code)));
+      const safeCode = escapeHtml(code);
+
       return `
         <div class="code-block-wrapper">
           <div class="code-block-header">
             <span>${language}</span>
-            <button class="copy-btn" onclick="copyCode(this, '${base64Code}')">Copy</button>
+            <button class="copy-btn" onclick="copyCode(this, '${base64Code}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy
+            </button>
           </div>
-          <pre><code class="language-${language}">${escapeHtml(code)}</code></pre>
+          <pre><code class="language-${language}">${safeCode}</code></pre>
         </div>
       `;
     };
@@ -530,8 +547,10 @@
       try {
         const code = decodeURIComponent(escape(atob(base64Code)));
         navigator.clipboard.writeText(code).then(() => {
-          btn.textContent = '✓ Copied!';
-          setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+          btn.innerHTML = `✓ Copied!`;
+          setTimeout(() => {
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"></path></svg> Copy`;
+          }, 2000);
         });
       } catch (err) { console.error('Copy failed:', err); }
     }
@@ -544,7 +563,9 @@
     }
 
     chatBox.addEventListener('scroll', () => {
-      userScrolledUp = !(chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight <= 50);
+      const threshold = 50;
+      const isAtBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight <= threshold;
+      userScrolledUp = !isAtBottom;
     });
 
     textarea.addEventListener('input', function() {
@@ -553,7 +574,10 @@
     });
 
     function handleKeyDown(event) {
-      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
     }
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
@@ -613,12 +637,13 @@
 
         const textSpan = document.createElement('span');
         textSpan.className = 'history-item-text';
-        textSpan.textContent = session.title || 'New Chat';
+        textSpan.textContent = session.title || 'Chat Session';
         item.appendChild(textSpan);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-item-btn';
-        deleteBtn.innerHTML = `✕`;
+        deleteBtn.title = 'Delete Chat';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
         
         let btnTouchFired = false;
         deleteBtn.addEventListener('touchend', (e) => {
@@ -637,9 +662,12 @@
       if (activeController) { activeController.abort(); activeController = null; }
       sessions = sessions.filter(s => s.id !== id);
       saveSessions();
+
       if (sessions.length === 0) startNewChat();
-      else if (currentSessionId === id) { currentSessionId = sessions[0].id; renderSidebar(); renderCurrentChat(); }
-      else { renderSidebar(); }
+      else if (currentSessionId === id) {
+        currentSessionId = sessions[0].id;
+        renderSidebar(); renderCurrentChat();
+      } else { renderSidebar(); }
     }
 
     function deleteAllChats() {
@@ -701,7 +729,7 @@
     }
 
     // ==========================================
-    // JS: API INTERACTION & TOKEN EFFICIENCY
+    // JS: API INTERACTION & MESSAGE HANDLING
     // ==========================================
     function getBoundedMessages(messages) {
       let totalChars = 0;
@@ -723,9 +751,7 @@
       if (!currentSessionId) startNewChat();
 
       let session = sessions.find(s => s.id === currentSessionId);
-      const isNewChat = session.messages.length === 0;
-
-      if (isNewChat) {
+      if (session.messages.length === 0) {
         session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
       }
 
@@ -759,10 +785,11 @@
       try {
         const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
         
-        // Efficient System Prompt Injection: Only sent on the very first message of a chat session
-        const apiMessages = isNewChat 
-          ? [{ role: 'system', content: SYSTEM_PROMPT }, ...baseMessages]
-          : baseMessages;
+        // System Prompt Injection
+        const apiMessages = [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...baseMessages
+        ];
 
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
@@ -801,10 +828,23 @@
 
                 responseContent.innerHTML = marked.parse(fullResponse);
                 Prism.highlightAllUnder(responseContent);
+                
                 if (!userScrolledUp) scrollToBottom();
               }
             } catch (e) {}
           }
+        }
+
+        if (streamBuffer.trim()) {
+          try {
+            const parsed = JSON.parse(streamBuffer.trim());
+            if (parsed.message && parsed.message.content) {
+              fullResponse += parsed.message.content;
+              responseContent.innerHTML = marked.parse(fullResponse);
+              Prism.highlightAllUnder(responseContent);
+              if (!userScrolledUp) scrollToBottom();
+            }
+          } catch (e) {}
         }
 
         const durationSec = (performance.now() - startTime) / 1000;
@@ -826,7 +866,7 @@
             saveSessions();
           } else { botRow.remove(); }
         } else {
-          responseContent.textContent = `Connection error: ${err.message}. Check TUNNEL_BASE_URL.`;
+          responseContent.textContent = `Connection error: ${err.message}. Check your TUNNEL_BASE_URL.`;
           responseContent.style.color = '#ef4444';
         }
       } finally {
