@@ -184,7 +184,7 @@
       align-items: center;
       justify-content: space-between;
       z-index: 10;
-      gap: 15px;
+      gap: 12px;
     }
 
     .header-left { display: flex; align-items: center; gap: 12px; }
@@ -208,6 +208,57 @@
     h1 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.01em; }
 
     .header-right { display: flex; align-items: center; gap: 8px; }
+
+    .search-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .search-toggle input { display: none; }
+
+    .toggle-slider {
+      width: 28px;
+      height: 16px;
+      background-color: var(--border-color);
+      border-radius: 20px;
+      position: relative;
+      transition: background-color 0.2s;
+    }
+
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--text-main);
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s;
+    }
+
+    .search-toggle input:checked + .toggle-slider {
+      background-color: var(--accent-color);
+    }
+
+    .search-toggle input:checked + .toggle-slider::before {
+      transform: translateX(12px);
+      background-color: #0f172a;
+    }
+
+    .search-toggle input:checked ~ .toggle-label {
+      color: var(--text-main);
+      font-weight: 600;
+    }
 
     .token-stats-badge {
       font-size: 0.8rem;
@@ -395,6 +446,7 @@
       :root { --sidebar-width: 200px; }
       .sidebar { position: absolute; height: 100%; }
       .sidebar:not(.collapsed) { box-shadow: 5px 0 25px rgba(0,0,0,0.5); }
+      .token-stats-badge { display: none; }
     }
   </style>
 </head>
@@ -426,6 +478,13 @@
         </div>
       </div>
       <div class="header-right">
+        <!-- Optional Web Search Toggle Switch -->
+        <label class="search-toggle" title="Enable live DuckDuckGo web search">
+          <input type="checkbox" id="search-enable-checkbox">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">🌐 Search</span>
+        </label>
+
         <div class="token-stats-badge">
           Total Tokens: <span id="total-tokens-display">0</span>
         </div>
@@ -445,12 +504,12 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.6.2</div>
+  <div class="version-tag">v1.7.0</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://premiere-nut-wiki-satisfaction.trycloudflare.com";
     const MAX_CONTEXT_CHARS = 24000;
-    const selectedModel = "qwen3.5:4b";
+    const selectedModel = "qwen3.5:4b"; // Optimal for 16GB M2 Air
 
     const SYSTEM_PROMPT = `You are Jake, a concise hybrid AI for code and creativity. Zero fluff. Complete code/answers only. No filler text.`;
 
@@ -661,22 +720,19 @@
       return bounded;
     }
 
-    // ==========================================
-    // CLIENT-SIDE WEB SEARCH VIA CORS PROXY
-    // ==========================================
+    // Optional DuckDuckGo web search via CORS proxy
     async function searchDuckDuckGo(query) {
       try {
         const proxyUrl = "https://api.allorigins.win/get?url=";
         const targetUrl = encodeURIComponent(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second cutoff
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
         const res = await fetch(proxyUrl + targetUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
         
         const data = await res.json();
-        
         const parser = new DOMParser();
         const doc = parser.parseFromString(data.contents, 'text/html');
         const snippets = Array.from(doc.querySelectorAll('.result__snippet'))
@@ -686,7 +742,7 @@
         
         return snippets.length > 0 ? snippets.join('\n- ') : '';
       } catch (err) {
-        console.warn("Client-side search failed/timed out:", err);
+        console.warn("Search bypassed or failed:", err);
         return "";
       }
     }
@@ -720,16 +776,23 @@
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">🔍 Searching web & thinking...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">Thinking...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
       userScrolledUp = false;
       scrollToBottom();
 
-      // Fetch web context in browser
-      const webContext = await searchDuckDuckGo(prompt);
-      
+      // Check search toggle state
+      const isSearchEnabled = document.getElementById('search-enable-checkbox').checked;
+      let webContext = "";
+
+      if (isSearchEnabled) {
+        responseContent.textContent = "🔍 Searching web...";
+        webContext = await searchDuckDuckGo(prompt);
+        responseContent.textContent = "Thinking...";
+      }
+
       activeController = new AbortController();
       const startTime = performance.now();
       let generatedTokenCount = 0;
@@ -740,7 +803,7 @@
         
         let customSystemPrompt = SYSTEM_PROMPT;
         if (webContext) {
-          customSystemPrompt += `\n\nLive Web Search Results:\n- ${webContext}\n\nUse the above live context if relevant to answer the query.`;
+          customSystemPrompt += `\n\nLive Web Search Results:\n- ${webContext}\n\nUse the above context if relevant.`;
         }
 
         const apiMessages = [
