@@ -327,8 +327,14 @@
       border-right: 1px solid var(--border-color);
     }
 
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .toggle-text {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
       color: var(--text-muted);
     }
@@ -336,8 +342,8 @@
     .switch {
       position: relative;
       display: inline-block;
-      width: 32px;
-      height: 18px;
+      width: 28px;
+      height: 16px;
     }
 
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -354,8 +360,8 @@
     .slider:before {
       position: absolute;
       content: "";
-      height: 12px;
-      width: 12px;
+      height: 10px;
+      width: 10px;
       left: 3px;
       bottom: 3px;
       background-color: white;
@@ -364,7 +370,7 @@
     }
 
     input:checked + .slider { background-color: var(--accent-color); }
-    input:checked + .slider:before { transform: translateX(14px); background-color: #0f172a; }
+    input:checked + .slider:before { transform: translateX(12px); background-color: #0f172a; }
 
     textarea {
       flex: 1;
@@ -437,11 +443,20 @@
     <div class="input-wrapper">
       <div class="input-card">
         <div class="input-controls">
-          <span class="toggle-text">Think</span>
-          <label class="switch">
-            <input type="checkbox" id="thinking-toggle" onchange="enableThinking = this.checked; localStorage.setItem('jakeboss_enable_thinking', enableThinking);">
-            <span class="slider"></span>
-          </label>
+          <div class="control-group">
+            <span class="toggle-text">Think</span>
+            <label class="switch">
+              <input type="checkbox" id="thinking-toggle" onchange="enableThinking = this.checked; localStorage.setItem('jakeboss_enable_thinking', enableThinking);">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="control-group">
+            <span class="toggle-text">Search</span>
+            <label class="switch">
+              <input type="checkbox" id="search-toggle" onchange="enableSearch = this.checked; localStorage.setItem('jakeboss_enable_search', enableSearch);">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSendClick();}"></textarea>
         <button id="send-btn" class="send-btn" onclick="handleSendClick()">
@@ -458,11 +473,13 @@
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
     let enableThinking = JSON.parse(localStorage.getItem('jakeboss_enable_thinking') ?? 'false');
+    let enableSearch = JSON.parse(localStorage.getItem('jakeboss_enable_search') ?? 'false');
     let currentSessionId = null;
     let abortController = null;
     let isGenerating = false;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
+    document.getElementById('search-toggle').checked = enableSearch;
 
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('open');
@@ -563,7 +580,6 @@
       localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
       renderSidebar();
 
-      // Render User Bubble
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
@@ -572,7 +588,6 @@
 
       inputEl.value = '';
 
-      // Render Bot Bubble (starts empty instead of dots)
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
       botRow.innerHTML = `
@@ -607,6 +622,7 @@
             model: modelName,
             messages: session.messages.map(m => ({ role: m.role, content: m.content })),
             think: enableThinking,
+            search: enableSearch,
             stream: true
           }),
           signal: abortController.signal
@@ -624,7 +640,7 @@
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // Keep incomplete trailing fragment in buffer
+          buffer = lines.pop();
 
           for (const line of lines) {
             if (!line.trim()) continue;
@@ -647,9 +663,7 @@
                 updateTotalTokensDisplay();
               }
               chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (err) {
-              // Ignore malformed json chunks until stream completes
-            }
+            } catch (err) {}
           }
         }
 
