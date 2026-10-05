@@ -20,7 +20,6 @@
       --accent-color: #38bdf8;
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
-      --text-thinking: #6b7280;
       --input-bg: #1e2430;
       --danger-color: #ef4444;
       --sidebar-width: 240px;
@@ -316,24 +315,6 @@
     }
     .response-content pre code { background: transparent; padding: 0; }
 
-    .thinking-block {
-      color: var(--text-thinking);
-      font-style: italic;
-      font-size: 0.9rem;
-      border-left: 3px solid var(--border-color);
-      padding-left: 12px;
-      margin-bottom: 12px;
-    }
-
-    .thinking-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-      font-style: normal;
-    }
-
     /* Input Controls */
     .input-wrapper {
       padding: 12px 16px 16px 16px;
@@ -484,12 +465,6 @@
       
       <!-- Features Bar for Toggles -->
       <div class="features-bar">
-        <button id="think-toggle-btn" class="feature-btn">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-            <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C6.5 2 2 6.5 2 12c0 2.4 1.1 4.5 2.8 6h14.4c1.7-1.5 2.8-3.6 2.8-6 0-5.5-4.5-10-10-10zm0 16H8v-1h8v1zm2.5-3H9.5v-1h5v1zm1.5-2.5h-8v-1h8v1z"/>
-          </svg>
-          Think
-        </button>
         <button id="search-toggle-btn" class="feature-btn">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
@@ -514,25 +489,17 @@
       keys: {
         sessions: 'jakeboss_sessions',
         tokens: 'jakeboss_total_tokens',
-        thinking: 'jakeboss_enable_thinking',
         search: 'jakeboss_enable_search'
       }
     };
 
-    // Internal state containing hidden user context
     let state = {
       sessions: JSON.parse(localStorage.getItem(CONFIG.keys.sessions) || '[]'),
       totalTokens: parseInt(localStorage.getItem(CONFIG.keys.tokens) || '0', 10),
-      enableThinking: JSON.parse(localStorage.getItem(CONFIG.keys.thinking) ?? 'false'),
       enableSearch: JSON.parse(localStorage.getItem(CONFIG.keys.search) ?? 'false'),
       currentSessionId: null,
       abortController: null,
-      isGenerating: false,
-      userInfo: {
-        ip: 'Unknown',
-        location: 'Unknown Location',
-        isp: 'Unknown ISP'
-      }
+      isGenerating: false
     };
 
     // DOM References
@@ -544,7 +511,6 @@
       userInput: document.getElementById('user-input'),
       sendBtn: document.getElementById('send-btn'),
       totalTokens: document.getElementById('total-tokens'),
-      btnThink: document.getElementById('think-toggle-btn'),
       btnSearch: document.getElementById('search-toggle-btn')
     };
 
@@ -557,23 +523,6 @@
       langPrefix: 'hljs language-'
     });
 
-    // Silently fetch IP and Location context behind the scenes
-    async function fetchUserContextSilently() {
-      try {
-        const res = await fetch('https://ipapi.co/json/');
-        if (res.ok) {
-          const data = await res.json();
-          state.userInfo = {
-            ip: data.ip || 'Unknown',
-            location: `${data.city || ''}, ${data.region || ''}, ${data.country_name || ''}`.replace(/^, |, $/g, ''),
-            isp: data.org || 'Unknown ISP'
-          };
-        }
-      } catch (err) {
-        // Silently fail if unreachable
-      }
-    }
-
     function updateToggleButtonUI(btn, isActive) {
       if (isActive) {
         btn.classList.add('active');
@@ -583,16 +532,7 @@
     }
 
     function init() {
-      fetchUserContextSilently();
-
-      updateToggleButtonUI(elements.btnThink, state.enableThinking);
       updateToggleButtonUI(elements.btnSearch, state.enableSearch);
-
-      elements.btnThink.addEventListener('click', () => {
-        state.enableThinking = !state.enableThinking;
-        localStorage.setItem(CONFIG.keys.thinking, state.enableThinking);
-        updateToggleButtonUI(elements.btnThink, state.enableThinking);
-      });
 
       elements.btnSearch.addEventListener('click', () => {
         state.enableSearch = !state.enableSearch;
@@ -724,7 +664,6 @@
         } else {
           row.innerHTML = `
             <div class="message bot">
-              ${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}
               <div class="response-content">${marked.parse(msg.content || '')}</div>
             </div>`;
         }
@@ -734,7 +673,6 @@
       scrollToBottom(true);
     }
 
-    // Smart auto-scroll: only scrolls down if user is already at the bottom or forced
     function scrollToBottom(force = false) {
       const chatBox = elements.chatBox;
       const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 100;
@@ -753,19 +691,6 @@
       }
 
       sendMessage(prompt);
-    }
-
-    function generateSystemPrompt() {
-      const now = new Date();
-      
-      const thinkingInstruction = state.enableThinking
-        ? "INSTRUCTION: You are in THINKING MODE. You MUST show your detailed step-by-step reasoning process inside <think>...</think> tags before providing your final response."
-        : "CRITICAL INSTRUCTION: You are in DIRECT MODE. You MUST NOT reason, deliberate, or use <think> tags. Do not explain your thought process. Output ONLY the immediate, direct, final answer.";
-
-      return {
-        role: 'system',
-        content: `${thinkingInstruction}\n\nUser Context Information:\n- Current Local Date & Time: ${now.toString()}\n- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n- IP Address: ${state.userInfo.ip}\n- Location: ${state.userInfo.location}\n- ISP: ${state.userInfo.isp}\n\nUse this context naturally if relevant.`
-      };
     }
 
     async function sendMessage(prompt) {
@@ -793,32 +718,20 @@
       botRow.className = 'message-row';
       botRow.innerHTML = `
         <div class="message bot">
-          <div class="thinking-block" style="display: none;">
-            <div class="thinking-label">Thinking...</div>
-            <span class="thinking-content"></span>
-          </div>
           <div class="response-content"></div>
         </div>`;
       elements.chatBox.appendChild(botRow);
 
-      const thinkingBlock = botRow.querySelector('.thinking-block');
-      const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
       
-      // Force scroll down when sending a new message
       scrollToBottom(true);
 
       state.abortController = new AbortController();
       state.isGenerating = true;
       elements.sendBtn.classList.add('stop');
 
-      let fullThinking = '';
       let fullResponse = '';
-
-      const formattedMessages = [
-        generateSystemPrompt(),
-        ...session.messages.map(m => ({ role: m.role, content: m.content }))
-      ];
+      const formattedMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
 
       try {
         const response = await fetch(`${CONFIG.baseUrl}/api/chat`, {
@@ -827,10 +740,7 @@
           body: JSON.stringify({
             model: CONFIG.modelName,
             messages: formattedMessages,
-            stream: true,
-            options: {
-              temperature: state.enableThinking ? 0.7 : 0.1
-            }
+            stream: true
           }),
           signal: state.abortController.signal
         });
@@ -854,12 +764,6 @@
             try {
               const parsed = JSON.parse(line);
 
-              if (parsed.message?.thinking) {
-                fullThinking += parsed.message.thinking;
-                thinkingBlock.style.display = 'block';
-                thinkingContent.textContent = fullThinking;
-              }
-
               if (parsed.message?.content) {
                 fullResponse += parsed.message.content;
                 responseContent.innerHTML = marked.parse(fullResponse);
@@ -870,13 +774,12 @@
                 updateTotalTokensDisplay();
               }
               
-              // Smart scroll check during stream chunks
               scrollToBottom();
             } catch (err) {}
           }
         }
 
-        session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
+        session.messages.push({ role: 'assistant', content: fullResponse });
         saveSessions();
 
       } catch (err) {
