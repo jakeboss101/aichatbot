@@ -87,106 +87,17 @@
       justify-content: center;
       gap: 10px;
       transition: transform 0.1s, opacity 0.2s;
-      flex-shrink: 0;
     }
 
     .new-chat-btn:active {
       transform: scale(0.98);
     }
 
-    /* Chat History List */
-    .chat-history-list {
-      flex: 1;
-      overflow-y: auto;
-      margin-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding-right: 2px;
-    }
-
-    .chat-history-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--text-main);
-      font-size: 0.95rem;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: background 0.15s, border-color 0.15s;
-    }
-
-    .chat-history-item:hover {
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    .chat-history-item.active {
-      background: var(--input-bg);
-      border-color: var(--border-color);
-    }
-
-    .chat-title-text {
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-right: 8px;
-    }
-
-    .delete-chat-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 4px;
-      transition: color 0.15s, background 0.15s;
-    }
-
-    .delete-chat-btn:hover {
-      color: #ef4444;
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .delete-chat-btn svg {
-      width: 14px;
-      height: 14px;
-      fill: currentColor;
-    }
-
-    .delete-all-btn {
-      width: 100%;
-      background: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 10px 14px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 10px;
-      flex-shrink: 0;
-      transition: all 0.15s;
-    }
-
-    .delete-all-btn:hover {
-      background: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
-      border-color: rgba(239, 68, 68, 0.3);
-    }
-
     .sidebar-info {
-      margin-top: 12px;
+      margin-top: auto;
       font-size: 0.85rem;
       color: var(--text-muted);
       line-height: 1.5;
-      flex-shrink: 0;
     }
 
     /* Main Container Shell */
@@ -253,16 +164,6 @@
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
-    .token-counter {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      background: var(--input-bg);
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid var(--border-color);
-      font-variant-numeric: tabular-nums;
-    }
-
     /* Chat Area */
     #chat-box {
       flex: 1;
@@ -307,7 +208,7 @@
 
     /* Input Dock Area */
     .input-wrapper {
-      padding: 12px 16px 6px 16px;
+      padding: 12px 16px 16px 16px;
       background-color: var(--bg-color);
       border-top: 1px solid var(--border-color);
     }
@@ -377,20 +278,6 @@
       fill: currentColor;
     }
 
-    /* Version Footer */
-    .app-footer {
-      display: flex;
-      justify-content: flex-end;
-      padding: 2px 16px 8px 16px;
-      background-color: var(--bg-color);
-    }
-
-    .version-tag {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      opacity: 0.7;
-    }
-
     @media (max-width: 850px) {
       .app-container {
         border-left: none;
@@ -408,10 +295,8 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       Start New Chat
     </button>
-    <div id="chat-history-list" class="chat-history-list"></div>
-    <button id="delete-all-btn" class="delete-all-btn" onclick="deleteAllChats()" style="display: none;">Delete All Chats</button>
     <div class="sidebar-info">
-      <p>Click <strong>Start New Chat</strong> to begin a fresh conversation.</p>
+      <p>Click <strong>Start New Chat</strong> if the conversation gets slow or long.</p>
     </div>
   </aside>
 
@@ -427,7 +312,7 @@
         <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
       </div>
 
-      <div id="token-counter" class="token-counter">Tokens: 0</div>
+      <div style="width: 24px;"></div>
     </header>
 
     <div id="chat-box">
@@ -444,19 +329,13 @@
         </button>
       </div>
     </div>
-    <div class="app-footer">
-      <span class="version-tag">v1.2.0</span>
-    </div>
   </div>
 
   <script>
     const baseUrl = "https://remote-basis-avatar-mpeg.trycloudflare.com";
     const modelName = "qwen3.5:4b";
 
-    let chats = [];
-    let currentChatId = null;
-    let isStreaming = false;
-    let abortController = null;
+    let messagesHistory = [];
 
     const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
@@ -469,192 +348,15 @@
       document.getElementById('sidebar-overlay').classList.toggle('active');
     }
 
-    function estimateTokens(text) {
-      if (!text) return 0;
-      return Math.ceil(text.length / 4);
-    }
-
-    function updateTokenDisplay() {
-      let total = 0;
-      chats.forEach(chat => {
-        chat.messages.forEach(msg => {
-          total += estimateTokens(msg.content);
-        });
-      });
-      document.getElementById('token-counter').textContent = `Tokens: ${total}`;
-    }
-
-    function saveChatsToStorage() {
-      localStorage.setItem('jakeboss_chats', JSON.stringify(chats));
-      localStorage.setItem('jakeboss_currentChatId', currentChatId);
-      updateTokenDisplay();
-    }
-
-    function loadChatsFromStorage() {
-      const saved = localStorage.getItem('jakeboss_chats');
-      if (saved) {
-        try {
-          chats = JSON.parse(saved);
-        } catch(e) { chats = []; }
-      }
-      const savedId = localStorage.getItem('jakeboss_currentChatId');
-      if (savedId && chats.some(c => c.id == savedId)) {
-        currentChatId = savedId;
-        loadChat(currentChatId, false);
-      } else if (chats.length > 0) {
-        currentChatId = chats[0].id;
-        loadChat(currentChatId, false);
-      } else {
-        startNewChat(false);
-      }
-      renderSidebarList();
-    }
-
-    function cleanupEmptyUnusedChats() {
-      chats = chats.filter(chat => chat.messages.length > 1 || chat.id !== currentChatId);
-      if (!chats.some(c => c.id === currentChatId)) {
-        if (chats.length > 0) {
-          currentChatId = chats[0].id;
-          loadChat(currentChatId, false);
-        } else {
-          startNewChat(false);
-        }
-      }
-      saveChatsToStorage();
-      renderSidebarList();
-    }
-
-    function startNewChat(openSidebar = true) {
-      if (isStreaming && abortController) {
-        abortController.abort();
-        isStreaming = false;
-      }
-
-      cleanupEmptyUnusedChats();
-
-      const newId = 'chat_' + Date.now();
-      const newChat = {
-        id: newId,
-        title: 'New Chat',
-        messages: [{ role: 'assistant', content: 'Hello! I am your personal assistant. How can I help you today?' }]
-      };
-
-      chats.unshift(newChat);
-      currentChatId = newId;
-      saveChatsToStorage();
-      renderSidebarList();
-      loadChat(currentChatId, false);
-
-      const inputEl = document.getElementById('user-input');
-      inputEl.disabled = false;
-      const sendBtn = document.getElementById('send-btn');
-      sendBtn.disabled = false;
-
-      if (openSidebar && window.innerWidth <= 850) {
-        toggleSidebar();
-      }
-    }
-
-    function loadChat(chatId, closeMenu = true) {
-      if (isStreaming && abortController) {
-        abortController.abort();
-        isStreaming = false;
-      }
-
-      cleanupEmptyUnusedChats();
-
-      currentChatId = chatId;
-      saveChatsToStorage();
-      renderSidebarList();
-
-      const chat = chats.find(c => c.id === chatId);
+    function startNewChat() {
+      messagesHistory = [];
       const chatBox = document.getElementById('chat-box');
-      chatBox.innerHTML = '';
-
-      if (chat) {
-        chat.messages.forEach(msg => {
-          const row = document.createElement('div');
-          row.className = 'message-row';
-          const msgDiv = document.createElement('div');
-          msgDiv.className = `message ${msg.role === 'user' ? 'user' : 'bot'}`;
-          msgDiv.textContent = msg.content;
-          row.appendChild(msgDiv);
-          chatBox.appendChild(row);
-        });
-      }
-      chatBox.scrollTop = chatBox.scrollHeight;
-
-      const inputEl = document.getElementById('user-input');
-      inputEl.disabled = false;
-      const sendBtn = document.getElementById('send-btn');
-      sendBtn.disabled = false;
-
-      if (closeMenu && window.innerWidth <= 850) {
-        toggleSidebar();
-      }
-    }
-
-    function deleteChat(event, chatId) {
-      event.stopPropagation();
-      if (isStreaming && currentChatId === chatId && abortController) {
-        abortController.abort();
-        isStreaming = false;
-      }
-
-      chats = chats.filter(c => c.id !== chatId);
-      if (currentChatId === chatId) {
-        if (chats.length > 0) {
-          currentChatId = chats[0].id;
-          loadChat(currentChatId, false);
-        } else {
-          startNewChat(false);
-        }
-      }
-      saveChatsToStorage();
-      renderSidebarList();
-    }
-
-    function deleteAllChats() {
-      if (isStreaming && abortController) {
-        abortController.abort();
-        isStreaming = false;
-      }
-      chats = [];
-      startNewChat(false);
-      saveChatsToStorage();
-    }
-
-    function renderSidebarList() {
-      const listEl = document.getElementById('chat-history-list');
-      const deleteAllBtn = document.getElementById('delete-all-btn');
-      listEl.innerHTML = '';
-
-      if (chats.length === 0) {
-        deleteAllBtn.style.display = 'none';
-        return;
-      }
-
-      deleteAllBtn.style.display = 'block';
-
-      chats.forEach(chat => {
-        const item = document.createElement('div');
-        item.className = `chat-history-item ${chat.id === currentChatId ? 'active' : ''}`;
-        item.onclick = () => loadChat(chat.id);
-
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'chat-title-text';
-        titleSpan.textContent = chat.title;
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delete-chat-btn';
-        delBtn.title = 'Delete chat';
-        delBtn.onclick = (e) => deleteChat(e, chat.id);
-        delBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
-
-        item.appendChild(titleSpan);
-        item.appendChild(delBtn);
-        listEl.appendChild(item);
-      });
+      chatBox.innerHTML = `
+        <div class="message-row">
+          <div class="message bot">Hello! I am your personal assistant. How can I help you today?</div>
+        </div>
+      `;
+      toggleSidebar();
     }
 
     function handleKeyDown(event) {
@@ -672,22 +374,7 @@
 
       if (!prompt) return;
 
-      if (isStreaming && abortController) {
-        abortController.abort();
-        isStreaming = false;
-      }
-
-      let activeChat = chats.find(c => c.id === currentChatId);
-      if (!activeChat) {
-        startNewChat(false);
-        activeChat = chats[0];
-      }
-
-      if (activeChat.messages.length === 1 && activeChat.messages[0].role === 'assistant') {
-        activeChat.title = prompt.length > 25 ? prompt.substring(0, 25) + '...' : prompt;
-      }
-
-      activeChat.messages.push({ role: 'user', content: prompt });
+      messagesHistory.push({ role: 'user', content: prompt });
 
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
@@ -697,6 +384,8 @@
 
       inputEl.value = '';
       inputEl.style.height = '28px';
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
@@ -705,19 +394,15 @@
       const botMsgDiv = botRow.querySelector('.message');
       chatBox.scrollTop = chatBox.scrollHeight;
 
-      isStreaming = true;
-      abortController = new AbortController();
-
       try {
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: modelName,
-            messages: activeChat.messages,
+            messages: messagesHistory,
             stream: true
-          }),
-          signal: abortController.signal
+          })
         });
 
         if (!response.ok) {
@@ -743,12 +428,14 @@
             try {
               const parsed = JSON.parse(trimmed);
               
+              // Handle reasoning/thinking stream tokens
               if (parsed.message && parsed.message.thinking) {
                 fullText += parsed.message.thinking;
                 botMsgDiv.textContent = fullText;
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
 
+              // Handle main response content stream tokens
               if (parsed.message && parsed.message.content) {
                 fullText += parsed.message.content;
                 botMsgDiv.textContent = fullText;
@@ -768,27 +455,18 @@
           } catch (e) {}
         }
 
-        activeChat.messages.push({ role: 'assistant', content: fullText });
-        saveChatsToStorage();
-        renderSidebarList();
+        messagesHistory.push({ role: 'assistant', content: fullText });
 
       } catch (err) {
-        if (err.name === 'AbortError') {
-          return;
-        }
         botMsgDiv.textContent = `Connection error: ${err.message}`;
         botMsgDiv.style.color = '#ef4444';
       } finally {
-        isStreaming = false;
-        abortController = null;
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
         inputEl.focus();
         chatBox.scrollTop = chatBox.scrollHeight;
       }
     }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadChatsFromStorage();
-    });
   </script>
 </body>
 </html>
