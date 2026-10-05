@@ -241,25 +241,6 @@
       gap: 10px;
     }
 
-    .location-badge {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      background-color: rgba(255, 255, 255, 0.03);
-      padding: 4px 10px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .location-badge .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: #10b981;
-    }
-
     .token-counter {
       font-size: 0.85rem;
       font-weight: 600;
@@ -472,7 +453,6 @@
       }
       .sidebar.open { transform: translateX(0); }
       .toggle-text { display: none; }
-      .location-badge { display: none; }
     }
   </style>
 </head>
@@ -497,10 +477,6 @@
         </div>
       </div>
       <div class="header-right">
-        <div id="location-badge" class="location-badge">
-          <span class="dot"></span>
-          <span id="location-text">Locating...</span>
-        </div>
         <div class="token-counter">Tokens: <span id="total-tokens">0</span></div>
       </div>
     </header>
@@ -545,7 +521,7 @@
       }
     };
 
-    // State object including client context
+    // Internal state containing hidden user context
     let state = {
       sessions: JSON.parse(localStorage.getItem(CONFIG.keys.sessions) || '[]'),
       totalTokens: parseInt(localStorage.getItem(CONFIG.keys.tokens) || '0', 10),
@@ -571,8 +547,7 @@
       sendBtn: document.getElementById('send-btn'),
       totalTokens: document.getElementById('total-tokens'),
       thinkingToggle: document.getElementById('thinking-toggle'),
-      searchToggle: document.getElementById('search-toggle'),
-      locationText: document.getElementById('location-text')
+      searchToggle: document.getElementById('search-toggle')
     };
 
     // Setup Marked with Highlight.js
@@ -584,8 +559,8 @@
       langPrefix: 'hljs language-'
     });
 
-    // Fetch IP and Location Metadata
-    async function fetchUserContext() {
+    // Silently fetch IP and Location context behind the scenes
+    async function fetchUserContextSilently() {
       try {
         const res = await fetch('https://ipapi.co/json/');
         if (res.ok) {
@@ -595,17 +570,14 @@
             location: `${data.city || ''}, ${data.region || ''}, ${data.country_name || ''}`.replace(/^, |, $/g, ''),
             isp: data.org || 'Unknown ISP'
           };
-          elements.locationText.textContent = `${state.userInfo.location} (${state.userInfo.ip})`;
-        } else {
-          throw new Error('Location lookup failed');
         }
       } catch (err) {
-        elements.locationText.textContent = 'Location Unavailable';
+        // Silently fail if unreachable
       }
     }
 
     function init() {
-      fetchUserContext();
+      fetchUserContextSilently();
 
       elements.thinkingToggle.checked = state.enableThinking;
       elements.searchToggle.checked = state.enableSearch;
@@ -770,7 +742,7 @@
       sendMessage(prompt);
     }
 
-    // Constructs dynamic system prompt payload with metadata
+    // Generates the system payload sent silently to Ollama
     function generateSystemPrompt() {
       const now = new Date();
       return {
@@ -778,11 +750,12 @@
         content: `User Context Information:
 - Current Local Date & Time: ${now.toString()}
 - ISO Timestamp: ${now.toISOString()}
+- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
 - IP Address: ${state.userInfo.ip}
-- Approximate Location: ${state.userInfo.location}
+- Location: ${state.userInfo.location}
 - ISP: ${state.userInfo.isp}
 
-Use this context naturally if relevant to the conversation (e.g., answering localized or time-sensitive questions).`
+Use this context naturally if relevant (e.g., answering localized or time-sensitive questions). Do not explicitly state that you were given system metadata unless necessary to answer the question.`
       };
     }
 
@@ -831,7 +804,7 @@ Use this context naturally if relevant to the conversation (e.g., answering loca
       let fullThinking = '';
       let fullResponse = '';
 
-      // Create payload: Inject system metadata prompt ahead of chat history
+      // Payload includes hidden system prompt context at index 0
       const formattedMessages = [
         generateSystemPrompt(),
         ...session.messages.map(m => ({ role: m.role, content: m.content }))
