@@ -556,10 +556,11 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.5</div>
+  <div class="version-tag">v1.4.2</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://org-myers-finances-pressure.trycloudflare.com";
+    const API_ENDPOINT = `${TUNNEL_BASE_URL}/v1/chat/completions`;
     const modelName = "hf.co/janhq/Jan-v3.5-4B-gguf:Q4_K_M";
     const MAX_CONTEXT_CHARS = 24000;
 
@@ -905,10 +906,12 @@
           ...getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }))
         ];
 
-        // Try standard endpoint first, fallback if necessary
-        const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
+        // Sending request directly to OpenAI-compatible endpoint for llama.cpp / Jan Server
+        const response = await fetch(API_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
             model: modelName,
             messages: apiMessages,
@@ -918,10 +921,12 @@
           signal: activeController.signal
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder('utf-8');
         let streamBuffer = '';
 
         while (true) {
@@ -930,21 +935,21 @@
 
           streamBuffer += decoder.decode(value, { stream: true });
           const lines = streamBuffer.split('\n');
-          streamBuffer = lines.pop();
+          
+          streamBuffer = lines.pop() || '';
 
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
 
-            // Handle standard SSE 'data: ' prefix if present
             let cleanLine = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed;
             if (cleanLine === '[DONE]') continue;
 
             try {
               const parsed = JSON.parse(cleanLine);
-              
-              // Support both OpenAI delta format and Ollama message format
+
               const chunk = parsed.choices?.[0]?.delta?.content 
+                         || parsed.choices?.[0]?.text 
                          || parsed.message?.content 
                          || '';
 
@@ -970,6 +975,7 @@
             try {
               const parsed = JSON.parse(cleanLine);
               const chunk = parsed.choices?.[0]?.delta?.content 
+                         || parsed.choices?.[0]?.text 
                          || parsed.message?.content 
                          || '';
               if (chunk) {
@@ -1012,7 +1018,7 @@
             botRow.remove();
           }
         } else {
-          responseContent.textContent = `Connection error: ${err.message}. Check your TUNNEL_BASE_URL.`;
+          responseContent.textContent = `Error: ${err.message}. Make sure server is reachable at /v1/chat/completions.`;
           responseContent.style.color = '#ef4444';
         }
       } finally {
