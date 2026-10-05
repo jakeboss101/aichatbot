@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- ========================================== -->
+  <!--               HTML: META & SETUP           -->
+  <!-- ========================================== -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>AI Assistant</title>
+  <title>Jake - AI</title>
 
   <!-- Marked.js for Markdown & Prism.js for Syntax Highlighting -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -14,6 +17,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 
   <style>
+    /* ========================================== */
+    /*             CSS: VARIABLES                 */
+    /* ========================================== */
     :root {
       --bg-color: #0e1117;
       --panel-bg: #161b22;
@@ -27,6 +33,9 @@
       --sidebar-width: 220px;
     }
 
+    /* ========================================== */
+    /*             CSS: BASE RESET                */
+    /* ========================================== */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -45,7 +54,9 @@
       position: relative;
     }
 
-    /* Permanent Auto-Collapsing Sidebar */
+    /* ========================================== */
+    /*             CSS: SIDEBAR                   */
+    /* ========================================== */
     .sidebar {
       width: var(--sidebar-width);
       min-width: var(--sidebar-width);
@@ -86,9 +97,7 @@
       transition: transform 0.1s, opacity 0.2s;
     }
 
-    .new-chat-btn:active {
-      transform: scale(0.98);
-    }
+    .new-chat-btn:active { transform: scale(0.98); }
 
     .chat-history-list {
       flex: 1;
@@ -108,7 +117,6 @@
       color: var(--text-muted);
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
-      touch-action: manipulation;
     }
 
     .history-item-text {
@@ -124,25 +132,13 @@
       color: var(--text-muted);
       cursor: pointer;
       padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 1;
-      transition: color 0.15s, background-color 0.15s;
       border-radius: 4px;
-      touch-action: manipulation;
       flex-shrink: 0;
     }
 
     @media (hover: hover) {
-      .history-item:hover {
-        background-color: rgba(255, 255, 255, 0.05);
-        color: var(--text-main);
-      }
-      .delete-item-btn:hover {
-        color: #ef4444;
-        background-color: rgba(239, 68, 68, 0.1);
-      }
+      .history-item:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--text-main); }
+      .delete-item-btn:hover { color: #ef4444; background-color: rgba(239, 68, 68, 0.1); }
     }
 
     .history-item.active {
@@ -169,7 +165,6 @@
       border-radius: 8px;
       font-size: 0.8rem;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
 
     .delete-all-btn:hover {
@@ -178,13 +173,11 @@
       border-color: #ef4444;
     }
 
-    .footer-brand {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      text-align: center;
-    }
+    .footer-brand { font-size: 0.8rem; color: var(--text-muted); text-align: center; }
 
-    /* Main Workspace Container */
+    /* ========================================== */
+    /*             CSS: MAIN WORKSPACE            */
+    /* ========================================== */
     .app-container {
       flex: 1;
       height: 100%;
@@ -207,14 +200,9 @@
       justify-content: space-between;
       z-index: 10;
       gap: 15px;
-      flex-wrap: wrap;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
 
     .menu-toggle-btn {
       background: transparent;
@@ -222,17 +210,9 @@
       color: var(--text-main);
       cursor: pointer;
       padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
+    .brand { display: flex; align-items: center; gap: 10px; }
     .brand-icon {
       width: 12px;
       height: 12px;
@@ -240,19 +220,9 @@
       background: linear-gradient(135deg, #38bdf8, #818cf8);
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
     }
+    h1 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.01em; }
 
-    h1 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-main);
-      letter-spacing: -0.01em;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .header-right { display: flex; align-items: center; gap: 8px; }
 
     .token-stats-badge {
       font-size: 0.8rem;
@@ -262,14 +232,9 @@
       padding: 6px 12px;
       border-radius: 20px;
       display: flex;
-      align-items: center;
       gap: 6px;
     }
-
-    .token-stats-badge span {
-      color: var(--accent-color);
-      font-weight: 600;
-    }
+    .token-stats-badge span { color: var(--accent-color); font-weight: 600; }
 
     .reset-tokens-btn {
       background: transparent;
@@ -279,16 +244,12 @@
       padding: 6px 10px;
       border-radius: 20px;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
+    .reset-tokens-btn:hover { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
 
-    .reset-tokens-btn:hover {
-      background-color: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
-      border-color: #ef4444;
-    }
-
-    /* Chat Area */
+    /* ========================================== */
+    /*             CSS: CHAT AREA                 */
+    /* ========================================== */
     #chat-box {
       flex: 1;
       overflow-y: auto;
@@ -302,11 +263,7 @@
       margin: 0 auto;
     }
 
-    .message-row {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-    }
+    .message-row { display: flex; flex-direction: column; width: 100%; }
 
     .message {
       max-width: 100%;
@@ -349,7 +306,9 @@
       margin-top: 4px;
     }
 
-    /* Code Block Formatting */
+    /* ========================================== */
+    /*             CSS: CODE BLOCKS               */
+    /* ========================================== */
     .code-block-wrapper {
       background-color: #161b22;
       border: 1px solid var(--border-color);
@@ -375,33 +334,20 @@
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 0.75rem;
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 4px 8px;
       border-radius: 4px;
-      transition: background 0.15s, color 0.15s;
     }
+    .copy-btn:hover { background-color: rgba(255, 255, 255, 0.1); color: var(--text-main); }
 
-    .copy-btn:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: var(--text-main);
-    }
+    .code-block-wrapper pre { margin: 0 !important; padding: 14px !important; background: transparent !important; overflow-x: auto; }
+    .code-block-wrapper code { font-family: "SFMono-Regular", Consolas, monospace !important; font-size: 0.9rem !important; }
 
-    .code-block-wrapper pre {
-      margin: 0 !important;
-      padding: 14px !important;
-      background: transparent !important;
-      overflow-x: auto;
-    }
-
-    .code-block-wrapper code {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace !important;
-      font-size: 0.9rem !important;
-    }
-
-    /* Input Dock */
+    /* ========================================== */
+    /*             CSS: INPUT DOCK                */
+    /* ========================================== */
     .input-wrapper {
       padding: 12px 16px 16px 16px;
       background-color: var(--bg-color);
@@ -438,10 +384,7 @@
       height: 28px;
       line-height: 1.4;
     }
-
-    textarea::placeholder {
-      color: var(--text-muted);
-    }
+    textarea::placeholder { color: var(--text-muted); }
 
     .send-btn {
       width: 42px;
@@ -455,27 +398,11 @@
       justify-content: center;
       cursor: pointer;
       flex-shrink: 0;
-      transition: transform 0.1s, opacity 0.2s;
     }
+    .send-btn:active { transform: scale(0.92); }
+    .send-btn:disabled { background: var(--border-color); color: var(--text-muted); cursor: not-allowed; }
+    .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
-    .send-btn:active {
-      transform: scale(0.92);
-    }
-
-    .send-btn:disabled {
-      background: var(--border-color);
-      color: var(--text-muted);
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .send-btn svg {
-      width: 20px;
-      height: 20px;
-      fill: currentColor;
-    }
-
-    /* Bottom Right Version Tag */
     .version-tag {
       position: absolute;
       bottom: 6px;
@@ -488,36 +415,38 @@
       z-index: 100;
     }
 
+    /* ========================================== */
+    /*             CSS: RESPONSIVE                */
+    /* ========================================== */
     @media (max-width: 768px) {
-      :root {
-        --sidebar-width: 200px;
-      }
-      .sidebar {
-        position: absolute;
-        height: 100%;
-      }
-      .sidebar:not(.collapsed) {
-        box-shadow: 5px 0 25px rgba(0,0,0,0.5);
-      }
+      :root { --sidebar-width: 200px; }
+      .sidebar { position: absolute; height: 100%; }
+      .sidebar:not(.collapsed) { box-shadow: 5px 0 25px rgba(0,0,0,0.5); }
     }
   </style>
 </head>
 <body>
 
-  <!-- Permanent Collapsible Sidebar (Default collapsed) -->
+  <!-- ========================================== -->
+  <!--               HTML: SIDEBAR                -->
+  <!-- ========================================== -->
   <aside id="sidebar" class="sidebar collapsed">
     <button class="new-chat-btn" onclick="startNewChat()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       New Chat
     </button>
+    
     <div id="chat-history-list" class="chat-history-list"></div>
+    
     <div class="sidebar-footer">
       <button class="delete-all-btn" onclick="deleteAllChats()">Delete All Chats</button>
       <div class="footer-brand">Ollama Web Client</div>
     </div>
   </aside>
 
-  <!-- Main Workspace -->
+  <!-- ========================================== -->
+  <!--               HTML: MAIN APP               -->
+  <!-- ========================================== -->
   <div class="app-container">
     <header>
       <div class="header-left">
@@ -526,7 +455,7 @@
         </button>
         <div class="brand">
           <div class="brand-icon"></div>
-          <h1>AI Assistant</h1>
+          <h1>Jake</h1>
         </div>
       </div>
       <div class="header-right">
@@ -541,7 +470,7 @@
 
     <div class="input-wrapper">
       <div class="input-card">
-        <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+        <textarea id="user-input" placeholder="Message Jake..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
         <button id="send-btn" class="send-btn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -549,22 +478,40 @@
     </div>
   </div>
 
-  <!-- Version Tag -->
   <div class="version-tag">v1.6.0</div>
 
+  <!-- ========================================== -->
+  <!--               JAVASCRIPT                   -->
+  <!-- ========================================== -->
   <script>
+    // ==========================================
+    // JS: CONFIGURATION & GLOBAL STATE
+    // ==========================================
     const TUNNEL_BASE_URL = "https://flexible-compiler-overnight-certificate.trycloudflare.com";
     const MAX_CONTEXT_CHARS = 24000;
     const selectedModel = "jan3.5";
+
+    const SYSTEM_PROMPT = `You are a high-tier hybrid AI named Jake, equally adept at deep technical engineering and lateral creative thinking. Be extremely concise.
+
+EXECUTION RULES:
+- ADAPTABILITY: For code or math, become a ruthless, zero-fluff engineer. Deliver complete, production-ready code.
+- CREATIVITY: For ideation or writing, be original and avoid predictable tropes.
+- VOICE: Direct, casual, self-aware. Never use generic filler like "As an AI" or "I'd be happy to."
+- CLARITY: State assumptions immediately if a request is ambiguous.
+- CONCISENESS: Get straight to the point. No introductory fluff.`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
     let activeController = null;
     let lifetimeTokens = parseInt(localStorage.getItem('app_total_tokens') || '0', 10);
-
-    const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
 
+    const chatBox = document.getElementById('chat-box');
+    const textarea = document.getElementById('user-input');
+
+    // ==========================================
+    // JS: MARKDOWN & SYNTAX HIGHLIGHTING
+    // ==========================================
     function escapeHtml(str) {
       return String(str)
         .replace(/&/g, '&amp;')
@@ -578,7 +525,6 @@
     renderer.code = function(token) {
       const code = (typeof token === 'object' ? token.text : token) || '';
       const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
-      
       const base64Code = btoa(unescape(encodeURIComponent(code)));
       const safeCode = escapeHtml(code);
 
@@ -605,16 +551,15 @@
           setTimeout(() => {
             btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"></path></svg> Copy`;
           }, 2000);
-        }).catch(err => console.error('Copy failed:', err));
-      } catch (err) {
-        console.error('Base64 decode failed:', err);
-      }
+        });
+      } catch (err) { console.error('Copy failed:', err); }
     }
 
+    // ==========================================
+    // JS: UI & EVENT LISTENERS
+    // ==========================================
     function scrollToBottom() {
-      requestAnimationFrame(() => {
-        chatBox.scrollTop = chatBox.scrollHeight;
-      });
+      requestAnimationFrame(() => { chatBox.scrollTop = chatBox.scrollHeight; });
     }
 
     chatBox.addEventListener('scroll', () => {
@@ -623,34 +568,43 @@
       userScrolledUp = !isAtBottom;
     });
 
-    const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
       this.style.height = 'auto';
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
 
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('collapsed');
+    function handleKeyDown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
     }
 
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+
+    // ==========================================
+    // JS: TOKEN MANAGEMENT
+    // ==========================================
     function updateOverallTokenStats() {
       document.getElementById('total-tokens-display').textContent = lifetimeTokens.toLocaleString();
       localStorage.setItem('app_total_tokens', lifetimeTokens);
     }
 
     function addTokensToLifetime(text) {
-      const estimatedTokens = Math.ceil(text.length / 4);
-      lifetimeTokens += estimatedTokens;
+      lifetimeTokens += Math.ceil(text.length / 4);
       updateOverallTokenStats();
     }
 
     function resetTokenCount() {
-      if (confirm('Are you sure you want to reset your total token count to 0?')) {
+      if (confirm('Reset total token count to 0?')) {
         lifetimeTokens = 0;
         updateOverallTokenStats();
       }
     }
 
+    // ==========================================
+    // JS: SESSION MANAGEMENT
+    // ==========================================
     function cleanupEmptySessions() {
       sessions = sessions.filter(s => s.messages && s.messages.length > 0);
     }
@@ -669,54 +623,34 @@
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
         
         let touchFired = false;
-
         const handleSelect = () => {
           touchFired = true;
           switchSession(session.id);
           document.getElementById('sidebar').classList.add('collapsed');
         };
 
-        item.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          handleSelect();
-        });
-
+        item.addEventListener('touchend', (e) => { e.preventDefault(); handleSelect(); });
         item.addEventListener('click', () => {
-          if (touchFired) {
-            touchFired = false;
-            return;
-          }
-          switchSession(session.id);
-          document.getElementById('sidebar').classList.add('collapsed');
+          if (touchFired) { touchFired = false; return; }
+          handleSelect();
         });
 
         const textSpan = document.createElement('span');
         textSpan.className = 'history-item-text';
         textSpan.textContent = session.title || 'Chat Session';
-
         item.appendChild(textSpan);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-item-btn';
         deleteBtn.title = 'Delete Chat';
-        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
         
         let btnTouchFired = false;
-
         deleteBtn.addEventListener('touchend', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          btnTouchFired = true;
-          deleteSession(session.id);
+          e.stopPropagation(); e.preventDefault(); btnTouchFired = true; deleteSession(session.id);
         });
-
         deleteBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (btnTouchFired) {
-            btnTouchFired = false;
-            return;
-          }
-          deleteSession(session.id);
+          e.stopPropagation(); if (btnTouchFired) { btnTouchFired = false; return; } deleteSession(session.id);
         };
 
         item.appendChild(deleteBtn);
@@ -725,30 +659,20 @@
     }
 
     function deleteSession(id) {
-      if (activeController) {
-        activeController.abort();
-        activeController = null;
-      }
+      if (activeController) { activeController.abort(); activeController = null; }
       sessions = sessions.filter(s => s.id !== id);
       saveSessions();
 
-      if (sessions.length === 0) {
-        startNewChat();
-      } else if (currentSessionId === id) {
+      if (sessions.length === 0) startNewChat();
+      else if (currentSessionId === id) {
         currentSessionId = sessions[0].id;
-        renderSidebar();
-        renderCurrentChat();
-      } else {
-        renderSidebar();
-      }
+        renderSidebar(); renderCurrentChat();
+      } else { renderSidebar(); }
     }
 
     function deleteAllChats() {
-      if (confirm('Are you sure you want to delete all chat history?')) {
-        if (activeController) {
-          activeController.abort();
-          activeController = null;
-        }
+      if (confirm('Delete all chat history?')) {
+        if (activeController) { activeController.abort(); activeController = null; }
         sessions = [];
         localStorage.removeItem('app_sessions');
         startNewChat();
@@ -756,33 +680,21 @@
     }
 
     function startNewChat() {
-      if (activeController) {
-        activeController.abort();
-        activeController = null;
-      }
+      if (activeController) { activeController.abort(); activeController = null; }
       cleanupEmptySessions();
 
-      const newSession = {
-        id: Date.now().toString(),
-        title: 'New Chat',
-        messages: []
-      };
+      const newSession = { id: Date.now().toString(), title: 'New Chat', messages: [] };
       sessions.unshift(newSession);
       currentSessionId = newSession.id;
       saveSessions();
       renderSidebar();
       renderCurrentChat();
-
       document.getElementById('sidebar').classList.add('collapsed');
     }
 
     function switchSession(id) {
       if (id === currentSessionId) return;
-
-      if (activeController) {
-        activeController.abort();
-        activeController = null;
-      }
+      if (activeController) { activeController.abort(); activeController = null; }
       cleanupEmptySessions();
 
       currentSessionId = id;
@@ -794,12 +706,8 @@
 
     function renderCurrentChat() {
       chatBox.innerHTML = '';
-
       const session = sessions.find(s => s.id === currentSessionId);
-      if (!session || session.messages.length === 0) {
-        updateOverallTokenStats();
-        return;
-      }
+      if (!session || session.messages.length === 0) { updateOverallTokenStats(); return; }
 
       session.messages.forEach((msg) => {
         const row = document.createElement('div');
@@ -809,12 +717,7 @@
           row.querySelector('.message').textContent = msg.content;
         } else {
           let speedTagHtml = msg.speed ? `<div class="token-speed-tag">⚡ ${msg.speed}</div>` : '';
-          row.innerHTML = `
-            <div class="message bot">
-              <div class="response-content"></div>
-              ${speedTagHtml}
-            </div>
-          `;
+          row.innerHTML = `<div class="message bot"><div class="response-content"></div>${speedTagHtml}</div>`;
           row.querySelector('.response-content').innerHTML = marked.parse(msg.content);
         }
         chatBox.appendChild(row);
@@ -825,13 +728,9 @@
       updateOverallTokenStats();
     }
 
-    function handleKeyDown(event) {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-      }
-    }
-
+    // ==========================================
+    // JS: API INTERACTION & MESSAGE HANDLING
+    // ==========================================
     function getBoundedMessages(messages) {
       let totalChars = 0;
       let bounded = [];
@@ -845,16 +744,10 @@
     }
 
     async function sendMessage() {
-      const inputEl = document.getElementById('user-input');
-      const prompt = inputEl.value.trim();
-
+      const prompt = textarea.value.trim();
       if (!prompt) return;
 
-      if (activeController) {
-        activeController.abort();
-        activeController = null;
-      }
-
+      if (activeController) { activeController.abort(); activeController = null; }
       if (!currentSessionId) startNewChat();
 
       let session = sessions.find(s => s.id === currentSessionId);
@@ -872,16 +765,12 @@
       userRow.querySelector('.message').textContent = prompt;
       chatBox.appendChild(userRow);
 
-      inputEl.value = '';
-      inputEl.style.height = '28px';
+      textarea.value = '';
+      textarea.style.height = '28px';
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `
-        <div class="message bot">
-          <div class="response-content">...</div>
-        </div>
-      `;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
@@ -894,19 +783,18 @@
       let fullResponse = '';
 
       try {
-        const apiMessages = getBoundedMessages(session.messages).map(m => ({ 
-          role: m.role, 
-          content: m.content 
-        }));
+        const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
+        
+        // System Prompt Injection
+        const apiMessages = [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...baseMessages
+        ];
 
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: selectedModel,
-            messages: apiMessages,
-            stream: true
-          }),
+          body: JSON.stringify({ model: selectedModel, messages: apiMessages, stream: true }),
           signal: activeController.signal
         });
 
@@ -932,6 +820,7 @@
               if (parsed.message && parsed.message.content) {
                 const chunk = parsed.message.content;
                 fullResponse += chunk;
+                
                 const chunkTokens = Math.ceil(chunk.length / 4);
                 generatedTokenCount += chunkTokens;
                 lifetimeTokens += chunkTokens;
@@ -958,8 +847,7 @@
           } catch (e) {}
         }
 
-        const endTime = performance.now();
-        const durationSec = (endTime - startTime) / 1000;
+        const durationSec = (performance.now() - startTime) / 1000;
         const tokensPerSec = durationSec > 0 ? (generatedTokenCount / durationSec).toFixed(1) : '0.0';
         const speedText = `${tokensPerSec} tok/s`;
 
@@ -968,36 +856,27 @@
         speedTag.textContent = `⚡ ${speedText}`;
         botRow.querySelector('.message.bot').appendChild(speedTag);
 
-        session.messages.push({
-          role: 'assistant',
-          content: fullResponse,
-          speed: speedText
-        });
+        session.messages.push({ role: 'assistant', content: fullResponse, speed: speedText });
         saveSessions();
 
       } catch (err) {
         if (err.name === 'AbortError') {
           if (fullResponse.trim()) {
-            session.messages.push({
-              role: 'assistant',
-              content: fullResponse,
-              speed: 'aborted'
-            });
+            session.messages.push({ role: 'assistant', content: fullResponse, speed: 'aborted' });
             saveSessions();
-          } else {
-            botRow.remove();
-          }
+          } else { botRow.remove(); }
         } else {
           responseContent.textContent = `Connection error: ${err.message}. Check your TUNNEL_BASE_URL.`;
           responseContent.style.color = '#ef4444';
         }
       } finally {
-        if (activeController && activeController.signal.aborted === false) {
-          activeController = null;
-        }
+        if (activeController && activeController.signal.aborted === false) activeController = null;
       }
     }
 
+    // ==========================================
+    // JS: INITIALIZATION
+    // ==========================================
     cleanupEmptySessions();
     updateOverallTokenStats();
     if (sessions.length === 0) {
