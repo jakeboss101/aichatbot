@@ -351,7 +351,7 @@
       background-color: var(--input-bg);
       border: 1px solid var(--border-color);
       border-radius: 28px;
-      padding: 8px 12px 8px 12px;
+      padding: 8px 12px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -363,14 +363,20 @@
       box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
     }
 
-    /* Thinking Toggle inside Input Card */
-    .input-toggle-wrapper {
+    /* Input Controls Section (Thinking & Web Search) */
+    .input-controls {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       padding-right: 8px;
       border-right: 1px solid var(--border-color);
       flex-shrink: 0;
+    }
+
+    .input-toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .toggle-text {
@@ -546,13 +552,22 @@
 
     <div class="input-wrapper">
       <div class="input-card">
-        <!-- Thinking Toggle moved to left side of input box -->
-        <div class="input-toggle-wrapper" title="Toggle Reasoning / Thinking">
-          <span class="toggle-text">Think</span>
-          <label class="switch">
-            <input type="checkbox" id="thinking-toggle" onchange="toggleThinkingSetting(this.checked)">
-            <span class="slider"></span>
-          </label>
+        <!-- Input controls (Thinking & Web Search) -->
+        <div class="input-controls">
+          <div class="input-toggle-item" title="Toggle Reasoning / Thinking">
+            <span class="toggle-text">Think</span>
+            <label class="switch">
+              <input type="checkbox" id="thinking-toggle" onchange="toggleThinkingSetting(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="input-toggle-item" title="Toggle Web Search">
+            <span class="toggle-text">Search</span>
+            <label class="switch">
+              <input type="checkbox" id="search-toggle" onchange="toggleSearchSetting(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
 
         <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
@@ -573,9 +588,11 @@
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
     let enableThinking = JSON.parse(localStorage.getItem('jakeboss_enable_thinking') ?? 'false');
+    let enableSearch = JSON.parse(localStorage.getItem('jakeboss_enable_search') ?? 'false');
     let currentSessionId = null;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
+    document.getElementById('search-toggle').checked = enableSearch;
 
     const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
@@ -586,6 +603,11 @@
     function toggleThinkingSetting(value) {
       enableThinking = value;
       localStorage.setItem('jakeboss_enable_thinking', JSON.stringify(enableThinking));
+    }
+
+    function toggleSearchSetting(value) {
+      enableSearch = value;
+      localStorage.setItem('jakeboss_enable_search', JSON.stringify(enableSearch));
     }
 
     function toggleSidebar() {
@@ -815,15 +837,18 @@
           });
         }
 
+        const requestBody = {
+          model: modelName,
+          messages: apiMessages,
+          think: enableThinking,
+          web_search: enableSearch,
+          stream: true
+        };
+
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: modelName,
-            messages: apiMessages,
-            think: enableThinking,
-            stream: true
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
