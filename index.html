@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Jake - AI (Jan Tools Enabled)</title>
+  <title>Jake - AI (Forced Web Search Enabled)</title>
 
   <!-- Marked.js for Markdown & Prism.js for Syntax Highlighting -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -478,7 +478,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v3.0-jan-tools</div>
+  <div class="version-tag">v3.1-forced-search</div>
 
   <!-- ========================================== -->
   <!--               JAVASCRIPT                   -->
@@ -491,21 +491,22 @@
     const MAX_CONTEXT_CHARS = 24000;
     const selectedModel = "jan3.5";
 
-    const SYSTEM_PROMPT = `You are Jake, an AI assistant with access to real-time tools.
+    const SYSTEM_PROMPT = `You are Jake, an AI assistant.
+
+SEARCH MANDATE:
+- You MUST call the web_search function on EVERY user prompt before providing an answer.
+- Do NOT answer any query directly without performing a web search first.
+- If a query requires full page text after search results are retrieved, call web_fetch on the appropriate URL.
 
 IDENTITY RULES:
 - When asked about your identity or model, respond with: "I am Jake, an AI assistant. How can I help you?"
 - Never mention underlying models (Menlo Research, Jan, LLaMA, Mistral, OpenAI).
 
-TOOLS AVAILABLE:
-- web_search: Use this to search the web whenever real-time data, stock/crypto prices, news, or current information is required.
-- web_fetch: Use this to read the contents of a specific web URL if more details are needed from search results.
-
 CODING RULES:
-- ALWAYS ask the user for confirmation and clarify requirements BEFORE generating or writing any code. Do not output code immediately upon request without asking first.
+- ALWAYS ask the user for confirmation and clarify requirements BEFORE generating or writing code.
 
 CONCISENESS RULES:
-- Keep answers strictly direct and concise. Avoid fluff.`;
+- Keep answers direct and concise. Avoid unnecessary fluff.`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
@@ -520,13 +521,12 @@ CONCISENESS RULES:
     // JAN AI TOOLS: WEB_SEARCH & WEB_FETCH
     // ==========================================
 
-    // 1. Tool Schemas
     const JAN_TOOLS = [
       {
         type: "function",
         function: {
           name: "web_search",
-          description: "Search the web for real-time information, live market prices, news, or current events.",
+          description: "Search the web for current data, dates, news, prices, or general information.",
           parameters: {
             type: "object",
             properties: {
@@ -552,7 +552,6 @@ CONCISENESS RULES:
       }
     ];
 
-    // 2. Execution logic for web_search (SearXNG Public JSON API)
     async function executeWebSearch(query) {
       try {
         const res = await fetch(`https://searx.be/search?q=${encodeURIComponent(query)}&format=json`);
@@ -568,7 +567,6 @@ CONCISENESS RULES:
       }
     }
 
-    // 3. Execution logic for web_fetch (CORS Proxy + DOM Text Extraction)
     async function executeWebFetch(url) {
       try {
         const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
@@ -793,7 +791,7 @@ CONCISENESS RULES:
       if (!session || session.messages.length === 0) { updateOverallTokenStats(); return; }
 
       session.messages.forEach((msg) => {
-        if (msg.role === 'tool') return; // Skip raw tool results in visual chat history
+        if (msg.role === 'tool') return;
         const row = document.createElement('div');
         row.className = 'message-row';
         if (msg.role === 'user') {
@@ -854,7 +852,7 @@ CONCISENESS RULES:
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">Thinking...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">Searching web...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
@@ -877,7 +875,7 @@ CONCISENESS RULES:
           }))
         ];
 
-        // STEP 1: INITIAL MODEL CALL WITH TOOLS AVAILABLE
+        // STEP 1: INITIAL MODEL CALL WITH FORCED TOOL USE
         let response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -885,6 +883,7 @@ CONCISENESS RULES:
             model: selectedModel,
             messages: apiMessages,
             tools: JAN_TOOLS,
+            tool_choice: "required",
             stream: false
           }),
           signal: activeController.signal
@@ -894,7 +893,7 @@ CONCISENESS RULES:
         let data = await response.json();
         let assistantMsg = data.message;
 
-        // STEP 2: HANDLE TOOL CALLS (web_search OR web_fetch)
+        // STEP 2: EXECUTE SEARCH & SCRAPE
         if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
           apiMessages.push(assistantMsg);
 
@@ -910,7 +909,7 @@ CONCISENESS RULES:
               responseContent.textContent = `🔍 Searching web for "${fnArgs.query}"...`;
               toolOutput = await executeWebSearch(fnArgs.query);
             } else if (fnName === "web_fetch") {
-              responseContent.textContent = `🌐 Reading web page "${fnArgs.url}"...`;
+              responseContent.textContent = `🌐 Scraping content from "${fnArgs.url}"...`;
               toolOutput = await executeWebFetch(fnArgs.url);
             }
 
@@ -921,7 +920,7 @@ CONCISENESS RULES:
             });
           }
 
-          // STEP 3: STREAM FINAL ANSWER USING RETRIEVED TOOL DATA
+          // STEP 3: STREAM FINAL RESPONSE USING TOOL RESULTS
           responseContent.textContent = '';
           const finalRes = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
             method: 'POST',
@@ -967,7 +966,6 @@ CONCISENESS RULES:
             }
           }
         } else {
-          // Direct response without tools
           fullResponse = assistantMsg.content || '';
           responseContent.innerHTML = marked.parse(fullResponse);
           Prism.highlightAllUnder(responseContent);
