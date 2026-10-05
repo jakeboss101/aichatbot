@@ -478,7 +478,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.8</div>
+  <div class="version-tag">v1.9</div>
 
   <!-- ========================================== -->
   <!--               JAVASCRIPT                   -->
@@ -491,23 +491,19 @@
     const MAX_CONTEXT_CHARS = 24000;
     const selectedModel = "jan3.5";
 
-    const SYSTEM_PROMPT = `You are Jake, a helpful and polite AI assistant. Always respond directly, clearly, and concisely to the user's questions without roleplay or conversational fluff.
+    const SYSTEM_PROMPT = `You are Jake, a helpful AI assistant. Always respond directly, clearly, and concisely.
 
 IDENTITY RULES:
-- When asked what model you are, who created you, or about your identity, respond exclusively with: "I am Jake, an AI assistant. How can I help you?"
-- Never mention underlying base models, Menlo Research, Jan, LLaMA, Mistral, or OpenAI.
+- When asked about your identity or model, respond with: "I am Jake, an AI assistant. How can I help you?"
+- Never mention underlying models (Menlo Research, Jan, LLaMA, Mistral, OpenAI).
 
 CONCISENESS RULES:
-- DEFAULT MODE: Be highly concise, direct, and brief. Keep answers strictly under 200 words. Eliminate introductory fluff, conversational greetings, and closing summaries.
-- EXCEPTION MODE: When requested to write code, stories, film, shortfilm, movies or film scripts, bypass the brevity restriction. Deliver complete, fully-realized code and rich, un-truncated creative prose.
+- DEFAULT MODE: Keep answers strictly direct and under 200 words. Avoid fluff.
+- EXCEPTION MODE: When writing code, stories, or film scripts, write fully realized, un-truncated prose without strict word limits.
 
-CODE GENERATION RULES:
-- Always deliver complete web applications as a single, unified HTML file (containing HTML, <style>, and <script> together in one block). Never split output into separate HTML, CSS, or JS files/sections.
-- Separate each distinct section inside the code using decorative ASCII art comment boxes.
-
-EXECUTION & VOICE:
-- ADAPTABILITY: For code/math, act as a zero-fluff engineer. For writing, be original and engaging.
-- VOICE: Direct, casual, self-aware. Never use generic filler like "As an AI" or "I'd be happy to."`;
+FORMATTING RULES:
+- Never wrap creative writing, film scripts, or plain text in Markdown code blocks (\`\`\` or \`\`\`plaintext).
+- Only use code blocks for actual programming code (HTML, JS, Python, etc.).`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
@@ -533,7 +529,13 @@ EXECUTION & VOICE:
     const renderer = new marked.Renderer();
     renderer.code = function(token) {
       const code = (typeof token === 'object' ? token.text : token) || '';
-      const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
+      const language = ((typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext').toLowerCase();
+      
+      // Do not render ASCII art or plain text inside stylized code blocks
+      if (language === 'plaintext' || language === 'text' || language === '') {
+        return `<p style="white-space: pre-wrap;">${escapeHtml(code)}</p>`;
+      }
+
       const base64Code = btoa(unescape(encodeURIComponent(code)));
       const safeCode = escapeHtml(code);
 
@@ -794,7 +796,6 @@ EXECUTION & VOICE:
       try {
         const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
         
-        // System Prompt Injection
         const apiMessages = [
           { role: 'system', content: SYSTEM_PROMPT },
           ...baseMessages
@@ -803,7 +804,15 @@ EXECUTION & VOICE:
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: selectedModel, messages: apiMessages, stream: true }),
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: apiMessages,
+            stream: true,
+            options: {
+              temperature: 0.7,
+              top_p: 0.9
+            }
+          }),
           signal: activeController.signal
         });
 
