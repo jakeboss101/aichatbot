@@ -147,10 +147,7 @@
       fill: currentColor;
     }
 
-    .history-item:hover .delete-chat-btn {
-      opacity: 1;
-    }
-
+    .history-item:hover .delete-chat-btn { opacity: 1; }
     .delete-chat-btn:hover {
       color: var(--danger-color);
       background-color: rgba(239, 68, 68, 0.15);
@@ -236,9 +233,7 @@
       color: var(--text-main);
     }
 
-    .glow-name {
-      color: var(--accent-color);
-    }
+    .glow-name { color: var(--accent-color); }
 
     .token-counter {
       font-size: 0.8rem;
@@ -250,9 +245,7 @@
       border: 1px solid var(--border-color);
     }
 
-    .token-counter span {
-      color: var(--accent-color);
-    }
+    .token-counter span { color: var(--accent-color); }
 
     #chat-box {
       flex: 1;
@@ -314,6 +307,25 @@
       color: var(--text-muted);
       margin-bottom: 4px;
       font-style: normal;
+    }
+
+    .preview-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 8px 14px;
+      background-color: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .preview-btn:hover {
+      opacity: 0.9;
     }
 
     .input-wrapper {
@@ -402,9 +414,7 @@
       gap: 8px;
     }
 
-    .input-card:focus-within {
-      border-color: var(--accent-color);
-    }
+    .input-card:focus-within { border-color: var(--accent-color); }
 
     textarea {
       flex: 1;
@@ -438,6 +448,47 @@
 
     .send-btn.stop { background: var(--danger-color); color: #ffffff; }
     .send-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+    #preview-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .preview-header h3 {
+      font-size: 1rem;
+      color: var(--text-main);
+    }
+
+    .close-preview-btn {
+      background: var(--danger-color);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #preview-frame {
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      border: none;
+      border-radius: 12px;
+    }
 
     @media (max-width: 768px) {
       .menu-toggle-btn { display: flex; }
@@ -502,6 +553,14 @@
     </div>
   </div>
 
+  <div id="preview-modal">
+    <div class="preview-header">
+      <h3>Live HTML Preview</h3>
+      <button class="close-preview-btn" onclick="closePreview()">Close</button>
+    </div>
+    <iframe id="preview-frame"></iframe>
+  </div>
+
   <script>
     const baseUrl = "https://recycling-belts-paperback-jazz.trycloudflare.com";
     const modelName = "qwen3.5:4b";
@@ -547,6 +606,25 @@
     };
     document.body.appendChild(scrollBottomBtn);
 
+    function extractHtmlCode(content) {
+      if (!content.includes('```html')) return null;
+      const match = content.split('```html')[1];
+      if (!match) return null;
+      return match.split('```')[0];
+    }
+
+    function openHtmlPreview(code) {
+      const modal = document.getElementById('preview-modal');
+      const iframe = document.getElementById('preview-frame');
+      modal.style.display = 'flex';
+      iframe.srcdoc = code;
+    }
+
+    function closePreview() {
+      document.getElementById('preview-modal').style.display = 'none';
+      document.getElementById('preview-frame').srcdoc = '';
+    }
+
     function isAtBottom() {
       const threshold = 30;
       return Math.ceil(chatBoxEl.scrollTop + chatBoxEl.clientHeight) >= chatBoxEl.scrollHeight - threshold;
@@ -569,9 +647,7 @@
         if (isGenerating) scrollBottomBtn.style.display = 'block';
       }
     }, { passive: true });
-    chatBoxEl.addEventListener('touchstart', () => {
-      userIsScrolling = true;
-    }, { passive: true });
+    chatBoxEl.addEventListener('touchstart', () => { userIsScrolling = true; }, { passive: true });
 
     function scrollToBottomIfNeeded() {
       if (!userIsScrolling) {
@@ -648,8 +724,17 @@
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
         } else {
-          row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div></div>`;
+          row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div><div class="preview-container"></div></div>`;
           row.querySelector('.response-content').textContent = msg.content;
+
+          const htmlCode = extractHtmlCode(msg.content);
+          if (htmlCode) {
+            const btn = document.createElement('button');
+            btn.className = 'preview-btn';
+            btn.innerHTML = '▶ Preview HTML';
+            btn.onclick = () => openHtmlPreview(htmlCode);
+            row.querySelector('.preview-container').appendChild(btn);
+          }
         }
         chatBoxEl.appendChild(row);
       });
@@ -673,13 +758,11 @@
 
     async function getUserLocation() {
       try {
-        const ipRes = await fetch('https://ipapi.co/json/');
+        const ipRes = await fetch('[https://ipapi.co/json/](https://ipapi.co/json/)');
         if (ipRes.ok) {
           const ipData = await ipRes.json();
           const locationParts = [ipData.city, ipData.region, ipData.country_name].filter(Boolean);
-          if (locationParts.length > 0) {
-            return locationParts.join(', ');
-          }
+          if (locationParts.length > 0) return locationParts.join(', ');
         }
       } catch (e) {}
 
@@ -688,7 +771,7 @@
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             try {
-              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+              const res = await fetch(`[https://nominatim.openstreetmap.org/reverse?format=json&lat=$](https://nominatim.openstreetmap.org/reverse?format=json&lat=$){pos.coords.latitude}&lon=${pos.coords.longitude}`);
               const data = await res.json();
               const addr = data.address || {};
               const city = addr.city || addr.town || addr.village || addr.hamlet || "";
@@ -696,9 +779,7 @@
               const country = addr.country || "";
               const formattedLoc = [city, state, country].filter(Boolean).join(", ");
               resolve(formattedLoc || "Location Unavailable");
-            } catch (e) {
-              resolve("Location Unavailable");
-            }
+            } catch (e) { resolve("Location Unavailable"); }
           },
           () => resolve("Location Denied/Unavailable"),
           { timeout: 5000 }
@@ -735,6 +816,7 @@
             <span class="thinking-content"></span>
           </div>
           <div class="response-content"></div>
+          <div class="preview-container"></div>
         </div>
       `;
       chatBoxEl.appendChild(botRow);
@@ -742,6 +824,7 @@
       const thinkingBlock = botRow.querySelector('.thinking-block');
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
+      const previewContainer = botRow.querySelector('.preview-container');
 
       userIsScrolling = false;
       scrollBottomBtn.style.display = 'none';
@@ -822,6 +905,16 @@
               scrollToBottomIfNeeded();
             } catch (err) {}
           }
+        }
+
+        const htmlCode = extractHtmlCode(fullResponse);
+        if (htmlCode) {
+          previewContainer.innerHTML = '';
+          const btn = document.createElement('button');
+          btn.className = 'preview-btn';
+          btn.innerHTML = '▶ Preview HTML';
+          btn.onclick = () => openHtmlPreview(htmlCode);
+          previewContainer.appendChild(btn);
         }
 
         session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
