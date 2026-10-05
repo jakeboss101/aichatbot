@@ -482,7 +482,6 @@
     document.getElementById('thinking-toggle').checked = enableThinking;
     document.getElementById('search-toggle').checked = enableSearch;
 
-    // Request GPS location if granted
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         pos => {
@@ -629,7 +628,9 @@
 
       let fullThinking = '';
       let fullResponse = '';
+      let isInsideThinkTag = false;
 
+      // Get user's current date, time, and time zone
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
       const clientTimeFormatted = new Date().toLocaleString([], {
         weekday: 'long',
@@ -641,21 +642,17 @@
         timeZoneName: 'short'
       });
 
-      const clientLocation = {
-        timeZone: userTimeZone,
-        coordinates: userCoordinates
-      };
-
-      // Format payload messages according to thinking state
-      let formattedMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
-      
-      // Direct instruction to suppress reasoning steps when think is off
-      if (!enableThinking) {
-        formattedMessages.unshift({
-          role: 'system',
-          content: 'Do not produce reasoning, internal thoughts, or <think> tags. Respond directly with the answer.'
-        });
+      // Construct system prompt containing temporal & spatial context
+      let systemPromptText = `User Current Date & Time: ${clientTimeFormatted}\nUser Time Zone: ${userTimeZone}`;
+      if (userCoordinates) {
+        systemPromptText += `\nUser Coordinates: ${userCoordinates.latitude}, ${userCoordinates.longitude}`;
       }
+
+      // Prepend system prompt message to array
+      const payloadMessages = [
+        { role: 'system', content: systemPromptText },
+        ...session.messages.map(m => ({ role: m.role, content: m.content }))
+      ];
 
       try {
         const response = await fetch(`${baseUrl}/api/chat`, {
@@ -663,14 +660,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: modelName,
-            messages: formattedMessages,
-            think: enableThinking,
+            messages: payloadMessages,
             options: {
               think: enableThinking
             },
             search: enableSearch,
-            clientTime: clientTimeFormatted,
-            clientLocation: clientLocation,
             stream: true
           }),
           signal: abortController.signal
@@ -694,16 +688,34 @@
             if (!line.trim()) continue;
             try {
               const parsed = JSON.parse(line);
+              let token = parsed.message?.content || '';
 
-              // Process thinking tokens strictly when enableThinking is true
+              // Support for standard Ollama thinking field
               if (parsed.message?.thinking && enableThinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
                 thinkingContent.textContent = fullThinking;
               }
 
-              if (parsed.message?.content) {
-                fullResponse += parsed.message.content;
+              // Handle raw <think> tags inline if present in token stream
+              if (token.includes('<think>')) {
+                isInsideThinkTag = true;
+                token = token.replace('<think>', '');
+              }
+
+              if (token.includes('</think>')) {
+                isInsideThinkTag = false;
+                token = token.replace('</think>', '');
+              }
+
+              if (isInsideThinkTag) {
+                if (enableThinking) {
+                  fullThinking += token;
+                  thinkingBlock.style.display = 'block';
+                  thinkingContent.textContent = fullThinking;
+                }
+              } else if (token) {
+                fullResponse += token;
                 responseContent.textContent = fullResponse;
               }
 
