@@ -3,8 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JakeBoss AI Assistant</title>
   <style>
     :root {
@@ -84,11 +82,6 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: transform 0.1s, opacity 0.2s;
-    }
-
-    .new-chat-btn:active {
-      transform: scale(0.98);
     }
 
     .chat-history-list {
@@ -109,7 +102,6 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      transition: background 0.15s, color 0.15s;
     }
 
     .history-title {
@@ -136,13 +128,9 @@
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       padding: 2px;
       border-radius: 4px;
       opacity: 0.6;
-      transition: opacity 0.15s, color 0.15s, background-color 0.15s;
     }
 
     .history-item:hover .delete-chat-btn {
@@ -168,12 +156,6 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: background-color 0.2s, border-color 0.2s;
-    }
-
-    .delete-all-btn:hover {
-      background-color: rgba(239, 68, 68, 0.12);
-      border-color: var(--danger-color);
     }
 
     .sidebar-footer {
@@ -190,9 +172,6 @@
       display: flex;
       flex-direction: column;
       background-color: var(--bg-color);
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      position: relative;
     }
 
     header {
@@ -200,7 +179,6 @@
       border-bottom: 1px solid var(--border-color);
       background-color: rgba(14, 17, 23, 0.85);
       backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -219,8 +197,6 @@
       border: none;
       color: var(--text-main);
       cursor: pointer;
-      padding: 4px;
-      border-radius: 6px;
     }
 
     .brand {
@@ -234,19 +210,16 @@
       height: 12px;
       border-radius: 50%;
       background: linear-gradient(135deg, #38bdf8, #818cf8);
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
     }
 
     h1 {
       font-size: 1.1rem;
       font-weight: 700;
       color: var(--text-main);
-      letter-spacing: -0.01em;
     }
 
     .glow-name {
       color: var(--accent-color);
-      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
     .token-counter {
@@ -261,18 +234,6 @@
 
     .token-counter span {
       color: var(--accent-color);
-      font-weight: 700;
-    }
-
-    .app-version {
-      position: absolute;
-      bottom: 6px;
-      right: 12px;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      opacity: 0.6;
-      pointer-events: none;
-      z-index: 5;
     }
 
     #chat-box {
@@ -282,7 +243,6 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      scroll-behavior: smooth;
       max-width: 850px;
       width: 100%;
       margin: 0 auto;
@@ -326,14 +286,12 @@
       border-left: 3px solid var(--border-color);
       padding-left: 12px;
       margin-bottom: 12px;
-      line-height: 1.5;
     }
 
     .thinking-label {
       font-size: 0.8rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
       color: var(--text-muted);
       margin-bottom: 4px;
       font-style: normal;
@@ -355,12 +313,10 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .input-card:focus-within {
       border-color: var(--accent-color);
-      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
     }
 
     .input-controls {
@@ -369,20 +325,12 @@
       gap: 8px;
       padding-right: 8px;
       border-right: 1px solid var(--border-color);
-      flex-shrink: 0;
-    }
-
-    .input-toggle-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
 
     .toggle-text {
       font-size: 0.75rem;
       font-weight: 600;
       color: var(--text-muted);
-      user-select: none;
     }
 
     .switch {
@@ -392,19 +340,15 @@
       height: 18px;
     }
 
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+    .switch input { opacity: 0; width: 0; height: 0; }
 
     .slider {
       position: absolute;
       cursor: pointer;
       inset: 0;
       background-color: var(--border-color);
-      transition: .2s;
       border-radius: 20px;
+      transition: .2s;
     }
 
     .slider:before {
@@ -415,18 +359,12 @@
       left: 3px;
       bottom: 3px;
       background-color: white;
-      transition: .2s;
       border-radius: 50%;
+      transition: .2s;
     }
 
-    input:checked + .slider {
-      background-color: var(--accent-color);
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(14px);
-      background-color: #0f172a;
-    }
+    input:checked + .slider { background-color: var(--accent-color); }
+    input:checked + .slider:before { transform: translateX(14px); background-color: #0f172a; }
 
     textarea {
       flex: 1;
@@ -436,14 +374,11 @@
       color: var(--text-main);
       font-size: 1.05rem;
       resize: none;
-      max-height: 120px;
       height: 28px;
       line-height: 1.4;
     }
 
-    textarea::placeholder {
-      color: var(--text-muted);
-    }
+    textarea::placeholder { color: var(--text-muted); }
 
     .send-btn {
       width: 42px;
@@ -456,56 +391,21 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      flex-shrink: 0;
-      transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
     }
 
-    .send-btn:active {
-      transform: scale(0.92);
-    }
-
-    .send-btn.stop {
-      background: var(--danger-color);
-      color: #ffffff;
-    }
-
-    .send-btn svg {
-      width: 20px;
-      height: 20px;
-      fill: currentColor;
-    }
+    .send-btn.stop { background: var(--danger-color); color: #ffffff; }
+    .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
     @media (max-width: 768px) {
-      .menu-toggle-btn {
-        display: flex;
-      }
-
+      .menu-toggle-btn { display: flex; }
       .sidebar {
         position: fixed;
-        top: 0;
-        left: 0;
-        bottom: 0;
+        top: 0; left: 0; bottom: 0;
         width: 240px;
         transform: translateX(-100%);
-        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.4);
       }
-
-      .sidebar.open {
-        transform: translateX(0);
-      }
-
-      .message {
-        font-size: 0.95rem;
-        padding: 12px 14px;
-      }
-
-      h1 {
-        font-size: 0.95rem;
-      }
-
-      .toggle-text {
-        display: none;
-      }
+      .sidebar.open { transform: translateX(0); }
+      .toggle-text { display: none; }
     }
   </style>
 </head>
@@ -514,35 +414,22 @@
   <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
   <aside id="sidebar" class="sidebar">
-    <button class="new-chat-btn" onclick="startNewChat()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      New Chat
-    </button>
-
+    <button class="new-chat-btn" onclick="startNewChat()">+ New Chat</button>
     <div id="chat-history-list" class="chat-history-list"></div>
-
-    <button id="delete-all-btn" class="delete-all-btn" onclick="deleteAllChats()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-      Delete All Chats
-    </button>
-
+    <button id="delete-all-btn" class="delete-all-btn" onclick="deleteAllChats()">Delete All</button>
     <div class="sidebar-footer">JakeBoss AI</div>
   </aside>
 
   <div class="app-container">
     <header>
       <div class="header-left">
-        <button class="menu-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle Navigation">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
+        <button class="menu-toggle-btn" onclick="toggleSidebar()">☰</button>
         <div class="brand">
           <div class="brand-icon"></div>
           <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
-      <div class="token-counter">
-        Tokens: <span id="total-tokens">0</span>
-      </div>
+      <div class="token-counter">Tokens: <span id="total-tokens">0</span></div>
     </header>
 
     <div id="chat-box"></div>
@@ -550,76 +437,40 @@
     <div class="input-wrapper">
       <div class="input-card">
         <div class="input-controls">
-          <div class="input-toggle-item" title="Toggle Reasoning / Thinking">
-            <span class="toggle-text">Think</span>
-            <label class="switch">
-              <input type="checkbox" id="thinking-toggle" onchange="toggleThinkingSetting(this.checked)">
-              <span class="slider"></span>
-            </label>
-          </div>
+          <span class="toggle-text">Think</span>
+          <label class="switch">
+            <input type="checkbox" id="thinking-toggle" onchange="enableThinking = this.checked; localStorage.setItem('jakeboss_enable_thinking', enableThinking);">
+            <span class="slider"></span>
+          </label>
         </div>
-
-        <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
-
+        <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSendClick();}"></textarea>
         <button id="send-btn" class="send-btn" onclick="handleSendClick()">
           <svg id="send-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
     </div>
-
-    <div class="app-version">v1.6</div>
   </div>
 
   <script>
-    const baseUrl = "https://immediate-places-scanner-disabilities.trycloudflare.com";
+    const baseUrl = "https://exit-cornell-asthma-managed.trycloudflare.com";
     const modelName = "qwen3.5:4b";
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
     let enableThinking = JSON.parse(localStorage.getItem('jakeboss_enable_thinking') ?? 'false');
     let currentSessionId = null;
-
     let abortController = null;
     let isGenerating = false;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
 
-    function getInputElement() {
-      return document.getElementById('user-input') || document.getElementById('user-prompt');
-    }
-
-    const textarea = getInputElement();
-    if (textarea) {
-      textarea.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-      });
-    }
-
-    function toggleThinkingSetting(value) {
-      enableThinking = value;
-      localStorage.setItem('jakeboss_enable_thinking', JSON.stringify(enableThinking));
-    }
-
     function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebar-overlay');
-      const isOpen = sidebar.classList.contains('open');
-      if (isOpen) {
-        closeSidebar();
-      } else {
-        sidebar.classList.add('open');
-        overlay.classList.add('active');
-      }
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-overlay').classList.toggle('active');
     }
-
     function closeSidebar() {
       document.getElementById('sidebar').classList.remove('open');
       document.getElementById('sidebar-overlay').classList.remove('active');
-    }
-
-    function saveSessions() {
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
     }
 
     function updateTotalTokensDisplay() {
@@ -627,96 +478,37 @@
       localStorage.setItem('jakeboss_total_tokens', totalTokens.toString());
     }
 
-    function removeUnusedSessions(keepId = null) {
-      sessions = sessions.filter(s => s.messages.length > 0 || s.id === keepId);
-      saveSessions();
-    }
-
-    function deleteChat(id, event) {
-      event.stopPropagation();
-      sessions = sessions.filter(s => s.id !== id);
-      saveSessions();
-
-      if (currentSessionId === id) {
-        if (sessions.length > 0) {
-          currentSessionId = sessions[0].id;
-        } else {
-          startNewChat();
-          return;
-        }
-      }
-      renderSidebar();
-      renderCurrentChat();
-    }
-
-    function deleteAllChats() {
-      if (sessions.length === 0) return;
-      if (confirm("Are you sure you want to delete all chats?")) {
-        sessions = [];
-        saveSessions();
-        startNewChat();
-      }
-    }
-
     function renderSidebar() {
       const historyList = document.getElementById('chat-history-list');
-      const deleteAllBtn = document.getElementById('delete-all-btn');
       historyList.innerHTML = '';
-
-      if (sessions.length === 0) {
-        deleteAllBtn.style.display = 'none';
-        return;
-      }
-      deleteAllBtn.style.display = 'flex';
-
       sessions.forEach(session => {
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        item.onclick = () => switchSession(session.id);
-
-        const titleEl = document.createElement('span');
-        titleEl.className = 'history-title';
-        titleEl.textContent = session.title || 'Chat Session';
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-chat-btn';
-        deleteBtn.ariaLabel = 'Delete chat';
-        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-        deleteBtn.onclick = (e) => deleteChat(session.id, e);
-
-        item.appendChild(titleEl);
-        item.appendChild(deleteBtn);
+        item.onclick = () => { currentSessionId = session.id; renderSidebar(); renderCurrentChat(); closeSidebar(); };
+        item.innerHTML = `<span class="history-title">${session.title || 'Chat'}</span><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${session.id}')">×</button>`;
         historyList.appendChild(item);
       });
     }
 
-    function startNewChat() {
-      if (isGenerating && abortController) {
-        abortController.abort();
-      }
-
-      removeUnusedSessions();
-
-      const newSession = {
-        id: Date.now().toString(),
-        title: 'New Chat',
-        messages: []
-      };
-      sessions.unshift(newSession);
-      currentSessionId = newSession.id;
-      saveSessions();
-      renderSidebar();
-      renderCurrentChat();
-      closeSidebar();
+    function deleteChat(id) {
+      sessions = sessions.filter(s => s.id !== id);
+      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      if (currentSessionId === id) startNewChat();
+      else renderSidebar();
     }
 
-    function switchSession(id) {
-      if (isGenerating && abortController) {
-        abortController.abort();
-      }
+    function deleteAllChats() {
+      sessions = [];
+      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      startNewChat();
+    }
 
-      currentSessionId = id;
-      removeUnusedSessions(currentSessionId);
+    function startNewChat() {
+      if (abortController) abortController.abort();
+      const newSession = { id: Date.now().toString(), title: 'New Chat', messages: [] };
+      sessions.unshift(newSession);
+      currentSessionId = newSession.id;
+      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
       renderSidebar();
       renderCurrentChat();
       closeSidebar();
@@ -725,19 +517,11 @@
     function renderCurrentChat() {
       const chatBox = document.getElementById('chat-box');
       chatBox.innerHTML = '';
-
       const session = sessions.find(s => s.id === currentSessionId);
       if (!session || session.messages.length === 0) {
-        chatBox.innerHTML = `
-          <div class="message-row">
-            <div class="message bot">
-              <div class="response-content">Hello! I am your personal assistant. How can I help you today?</div>
-            </div>
-          </div>
-        `;
+        chatBox.innerHTML = `<div class="message-row"><div class="message bot"><div class="response-content">Hello! I am your personal assistant. How can I help you today?</div></div></div>`;
         return;
       }
-
       session.messages.forEach(msg => {
         const row = document.createElement('div');
         row.className = 'message-row';
@@ -745,111 +529,50 @@
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
         } else {
-          row.innerHTML = `
-            <div class="message bot">
-              ${msg.thinking ? `
-                <div class="thinking-block">
-                  <div class="thinking-label">Thinking...</div>
-                  <span class="thinking-content">${escapeHtml(msg.thinking)}</span>
-                </div>` : ''}
-              <div class="response-content"></div>
-            </div>
-          `;
+          row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div></div>`;
           row.querySelector('.response-content').textContent = msg.content;
         }
         chatBox.appendChild(row);
       });
-
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function escapeHtml(text) {
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        handleSendClick();
-      }
-    }
-
-    function setBtnState(generating) {
-      isGenerating = generating;
-      const sendBtn = document.getElementById('send-btn');
-      const sendIcon = document.getElementById('send-icon');
-
-      if (generating) {
-        sendBtn.classList.add('stop');
-        sendBtn.title = "Stop Generating";
-        sendIcon.innerHTML = `<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>`;
-      } else {
-        sendBtn.classList.remove('stop');
-        sendBtn.title = "Send Message";
-        sendIcon.innerHTML = `<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>`;
-      }
-    }
-
     function handleSendClick() {
-      const inputEl = getInputElement();
-      const prompt = inputEl ? inputEl.value.trim() : "";
+      const inputEl = document.getElementById('user-input');
+      const prompt = inputEl.value.trim();
+      if (!prompt) return;
 
-      if (isGenerating) {
-        if (abortController) {
-          abortController.abort();
-        }
-        if (prompt) {
-          sendMessage(prompt);
-        }
-      } else {
-        if (prompt) {
-          sendMessage(prompt);
-        }
+      if (isGenerating && abortController) {
+        abortController.abort();
+        return;
       }
-    }
 
-    function parseChunkContent(parsed) {
-      if (parsed.message && typeof parsed.message.content === 'string') {
-        return parsed.message.content;
-      }
-      if (typeof parsed.response === 'string') {
-        return parsed.response;
-      }
-      if (typeof parsed.content === 'string') {
-        return parsed.content;
-      }
-      return '';
+      sendMessage(prompt);
     }
 
     async function sendMessage(prompt) {
-      const inputEl = getInputElement();
+      const inputEl = document.getElementById('user-input');
       const chatBox = document.getElementById('chat-box');
+      const session = sessions.find(s => s.id === currentSessionId);
 
-      if (!currentSessionId) {
-        startNewChat();
-      }
-
-      let session = sessions.find(s => s.id === currentSessionId);
-      
       if (session.messages.length === 0) {
         session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
       }
 
       session.messages.push({ role: 'user', content: prompt });
-      saveSessions();
+      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
       renderSidebar();
 
+      // Render User Bubble
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
       userRow.querySelector('.message').textContent = prompt;
       chatBox.appendChild(userRow);
 
-      if (inputEl) {
-        inputEl.value = '';
-        inputEl.style.height = '28px';
-      }
+      inputEl.value = '';
 
+      // Render Bot Bubble (starts empty instead of dots)
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
       botRow.innerHTML = `
@@ -858,7 +581,7 @@
             <div class="thinking-label">Thinking...</div>
             <span class="thinking-content"></span>
           </div>
-          <div class="response-content">...</div>
+          <div class="response-content"></div>
         </div>
       `;
       chatBox.appendChild(botRow);
@@ -866,144 +589,88 @@
       const thinkingBlock = botRow.querySelector('.thinking-block');
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
-
       chatBox.scrollTop = chatBox.scrollHeight;
 
       abortController = new AbortController();
-      setBtnState(true);
+      isGenerating = true;
+      const sendBtn = document.getElementById('send-btn');
+      sendBtn.classList.add('stop');
 
       let fullThinking = '';
       let fullResponse = '';
 
       try {
-        let apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
-
-        if (!enableThinking) {
-          apiMessages.unshift({
-            role: 'system',
-            content: 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.'
-          });
-        }
-
-        const requestBody = {
-          model: modelName,
-          messages: apiMessages,
-          think: enableThinking,
-          stream: true
-        };
-
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify({
+            model: modelName,
+            messages: session.messages.map(m => ({ role: m.role, content: m.content })),
+            think: enableThinking,
+            stream: true
+          }),
           signal: abortController.signal
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let streamBuffer = '';
+        let buffer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          streamBuffer += decoder.decode(value, { stream: true });
-          const lines = streamBuffer.split('\n');
-          streamBuffer = lines.pop();
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Keep incomplete trailing fragment in buffer
 
           for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
+            if (!line.trim()) continue;
             try {
-              const parsed = JSON.parse(trimmed);
+              const parsed = JSON.parse(line);
 
-              if (enableThinking && parsed.message && parsed.message.thinking) {
+              if (parsed.message?.thinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
                 thinkingContent.textContent = fullThinking;
-                chatBox.scrollTop = chatBox.scrollHeight;
               }
 
-              const textChunk = parseChunkContent(parsed);
-              if (textChunk) {
-                if (fullResponse === '') responseContent.textContent = '';
-                fullResponse += textChunk;
+              if (parsed.message?.content) {
+                fullResponse += parsed.message.content;
                 responseContent.textContent = fullResponse;
-                chatBox.scrollTop = chatBox.scrollHeight;
               }
 
               if (parsed.done) {
-                const promptTokens = parsed.prompt_eval_count || 0;
-                const evalTokens = parsed.eval_count || 0;
-                totalTokens += (promptTokens + evalTokens);
+                totalTokens += (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                 updateTotalTokensDisplay();
               }
-            } catch (e) {}
+              chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+              // Ignore malformed json chunks until stream completes
+            }
           }
         }
 
-        if (streamBuffer.trim()) {
-          try {
-            const parsed = JSON.parse(streamBuffer.trim());
-            if (enableThinking && parsed.message && parsed.message.thinking) {
-              fullThinking += parsed.message.thinking;
-            }
-            const textChunk = parseChunkContent(parsed);
-            if (textChunk) {
-              if (fullResponse === '') responseContent.textContent = '';
-              fullResponse += textChunk;
-              responseContent.textContent = fullResponse;
-            }
-            if (parsed.done) {
-              const promptTokens = parsed.prompt_eval_count || 0;
-              const evalTokens = parsed.eval_count || 0;
-              totalTokens += (promptTokens + evalTokens);
-              updateTotalTokensDisplay();
-            }
-          } catch (e) {}
-        }
-
-        session.messages.push({
-          role: 'assistant',
-          content: fullResponse,
-          thinking: enableThinking ? fullThinking : ''
-        });
-        saveSessions();
+        session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
+        localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
 
       } catch (err) {
-        if (err.name === 'AbortError') {
-          if (fullResponse || fullThinking) {
-            session.messages.push({
-              role: 'assistant',
-              content: fullResponse + " [Interrupted]",
-              thinking: enableThinking ? fullThinking : ''
-            });
-            saveSessions();
-          } else {
-            botRow.remove();
-          }
-        } else {
-          responseContent.textContent = `Connection error: ${err.message}`;
-          responseContent.style.color = '#ef4444';
+        if (err.name !== 'AbortError') {
+          responseContent.textContent = `Error connecting to model: ${err.message}`;
+          responseContent.style.color = 'var(--danger-color)';
         }
       } finally {
-        setBtnState(false);
+        isGenerating = false;
+        sendBtn.classList.remove('stop');
         abortController = null;
-        chatBox.scrollTop = chatBox.scrollHeight;
       }
     }
 
     updateTotalTokensDisplay();
-    if (sessions.length === 0) {
-      startNewChat();
-    } else {
-      currentSessionId = sessions[0].id;
-      removeUnusedSessions(currentSessionId);
-      renderSidebar();
-      renderCurrentChat();
-    }
+    if (sessions.length === 0) startNewChat();
+    else { currentSessionId = sessions[0].id; renderSidebar(); renderCurrentChat(); }
   </script>
 </body>
 </html>
