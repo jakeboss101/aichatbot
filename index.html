@@ -608,14 +608,16 @@
     renderer.code = function(token) {
       const code = (typeof token === 'object' ? token.text : token) || '';
       const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
-      const encodedCode = encodeURIComponent(code);
+      
+      // Base64 encoding prevents quotes/HTML characters from breaking the JS inline attributes
+      const base64Code = btoa(unescape(encodeURIComponent(code)));
       const safeCode = escapeHtml(code);
 
       return `
         <div class="code-block-wrapper">
           <div class="code-block-header">
             <span>${language}</span>
-            <button class="copy-btn" onclick="copyCode(this, '${encodedCode}')">
+            <button class="copy-btn" onclick="copyCode(this, '${base64Code}')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               Copy
             </button>
@@ -626,14 +628,18 @@
     };
     marked.setOptions({ renderer: renderer });
 
-    function copyCode(btn, encodedCode) {
-      const code = decodeURIComponent(encodedCode);
-      navigator.clipboard.writeText(code).then(() => {
-        btn.innerHTML = `✓ Copied!`;
-        setTimeout(() => {
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"></path></svg> Copy`;
-        }, 2000);
-      });
+    function copyCode(btn, base64Code) {
+      try {
+        const code = decodeURIComponent(escape(atob(base64Code)));
+        navigator.clipboard.writeText(code).then(() => {
+          btn.innerHTML = `✓ Copied!`;
+          setTimeout(() => {
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"></path></svg> Copy`;
+          }, 2000);
+        }).catch(err => console.error('Copy failed:', err));
+      } catch (err) {
+        console.error('Base64 decode failed:', err);
+      }
     }
 
     function scrollToBottom() {
