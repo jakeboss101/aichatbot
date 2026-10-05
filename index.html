@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Jake - AI (Forced Web Search Enabled)</title>
+  <title>Jake - AI</title>
 
   <!-- Marked.js for Markdown & Prism.js for Syntax Highlighting -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -478,7 +478,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v3.1-forced-search</div>
+  <div class="version-tag">v1.6.0</div>
 
   <!-- ========================================== -->
   <!--               JAVASCRIPT                   -->
@@ -493,20 +493,17 @@
 
     const SYSTEM_PROMPT = `You are Jake, an AI assistant.
 
-SEARCH MANDATE:
-- You MUST call the web_search function on EVERY user prompt before providing an answer.
-- Do NOT answer any query directly without performing a web search first.
-- If a query requires full page text after search results are retrieved, call web_fetch on the appropriate URL.
-
 IDENTITY RULES:
-- When asked about your identity or model, respond with: "I am Jake, an AI assistant. How can I help you?"
-- Never mention underlying models (Menlo Research, Jan, LLaMA, Mistral, OpenAI).
-
-CODING RULES:
-- ALWAYS ask the user for confirmation and clarify requirements BEFORE generating or writing code.
+- When asked what model you are, who created you, or about your identity, respond exclusively with: "I am Jake, an AI assistant. How can I help you?"
+- Never mention underlying base models, Menlo Research, Jan, LLaMA, Mistral, or OpenAI.
 
 CONCISENESS RULES:
-- Keep answers direct and concise. Avoid unnecessary fluff.`;
+- DEFAULT MODE: Be highly concise, direct, and brief. Keep answers strictly under 200 words. Eliminate introductory fluff, conversational greetings, and closing summaries.
+- EXCEPTION MODE: When requested to write code, stories, or film scripts, bypass the brevity restriction. Deliver complete, fully-realized code and rich, un-truncated creative prose.
+
+EXECUTION & VOICE:
+- ADAPTABILITY: For code/math, act as a zero-fluff engineer. For writing, be original and engaging.
+- VOICE: Direct, casual, self-aware. Never use generic filler like "As an AI" or "I'd be happy to."`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
@@ -516,74 +513,6 @@ CONCISENESS RULES:
 
     const chatBox = document.getElementById('chat-box');
     const textarea = document.getElementById('user-input');
-
-    // ==========================================
-    // JAN AI TOOLS: WEB_SEARCH & WEB_FETCH
-    // ==========================================
-
-    const JAN_TOOLS = [
-      {
-        type: "function",
-        function: {
-          name: "web_search",
-          description: "Search the web for current data, dates, news, prices, or general information.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "The search query string" }
-            },
-            required: ["query"]
-          }
-        }
-      },
-      {
-        type: "function",
-        function: {
-          name: "web_fetch",
-          description: "Fetch and extract text content from a specific URL.",
-          parameters: {
-            type: "object",
-            properties: {
-              url: { type: "string", description: "The full HTTP/HTTPS URL to fetch" }
-            },
-            required: ["url"]
-          }
-        }
-      }
-    ];
-
-    async function executeWebSearch(query) {
-      try {
-        const res = await fetch(`https://searx.be/search?q=${encodeURIComponent(query)}&format=json`);
-        if (!res.ok) return "Search request failed.";
-        const data = await res.json();
-        if (!data.results || data.results.length === 0) return "No results found.";
-
-        return data.results.slice(0, 4).map((r, i) => 
-          `[Result ${i + 1}]\nTitle: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}`
-        ).join("\n\n");
-      } catch (err) {
-        return `Search error: ${err.message}`;
-      }
-    }
-
-    async function executeWebFetch(url) {
-      try {
-        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-        if (!res.ok) return "Failed to fetch web page.";
-        const data = await res.json();
-        
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, 'text/html');
-        doc.querySelectorAll('script, style, svg, nav, footer, header').forEach(el => el.remove());
-        
-        const pageText = doc.body.textContent || "";
-        const cleanedText = pageText.replace(/\s+/g, ' ').trim();
-        return cleanedText.length > 3000 ? cleanedText.substring(0, 3000) + "...\n(content truncated)" : cleanedText;
-      } catch (err) {
-        return `Fetch error: ${err.message}`;
-      }
-    }
 
     // ==========================================
     // JS: MARKDOWN & SYNTAX HIGHLIGHTING
@@ -600,12 +529,7 @@ CONCISENESS RULES:
     const renderer = new marked.Renderer();
     renderer.code = function(token) {
       const code = (typeof token === 'object' ? token.text : token) || '';
-      const language = ((typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext').toLowerCase();
-      
-      if (language === 'plaintext' || language === 'text' || language === '') {
-        return `<p style="white-space: pre-wrap;">${escapeHtml(code)}</p>`;
-      }
-
+      const language = (typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext';
       const base64Code = btoa(unescape(encodeURIComponent(code)));
       const safeCode = escapeHtml(code);
 
@@ -791,18 +715,17 @@ CONCISENESS RULES:
       if (!session || session.messages.length === 0) { updateOverallTokenStats(); return; }
 
       session.messages.forEach((msg) => {
-        if (msg.role === 'tool') return;
         const row = document.createElement('div');
         row.className = 'message-row';
         if (msg.role === 'user') {
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
-        } else if (msg.role === 'assistant' && msg.content) {
+        } else {
           let speedTagHtml = msg.speed ? `<div class="token-speed-tag">⚡ ${msg.speed}</div>` : '';
           row.innerHTML = `<div class="message bot"><div class="response-content"></div>${speedTagHtml}</div>`;
           row.querySelector('.response-content').innerHTML = marked.parse(msg.content);
         }
-        if (row.innerHTML) chatBox.appendChild(row);
+        chatBox.appendChild(row);
       });
 
       Prism.highlightAll();
@@ -811,13 +734,13 @@ CONCISENESS RULES:
     }
 
     // ==========================================
-    // JS: TOOL-AWARE MESSAGE HANDLING LOOP
+    // JS: API INTERACTION & MESSAGE HANDLING
     // ==========================================
     function getBoundedMessages(messages) {
       let totalChars = 0;
       let bounded = [];
       for (let i = messages.length - 1; i >= 0; i--) {
-        const msgLen = (messages[i].content || '').length;
+        const msgLen = messages[i].content.length;
         if (totalChars + msgLen > MAX_CONTEXT_CHARS && bounded.length > 0) break;
         bounded.unshift(messages[i]);
         totalChars += msgLen;
@@ -852,7 +775,7 @@ CONCISENESS RULES:
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">Searching web...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
@@ -865,110 +788,68 @@ CONCISENESS RULES:
       let fullResponse = '';
 
       try {
-        let apiMessages = [
+        const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
+        
+        // System Prompt Injection
+        const apiMessages = [
           { role: 'system', content: SYSTEM_PROMPT },
-          ...getBoundedMessages(session.messages).map(m => ({
-            role: m.role,
-            content: m.content || '',
-            name: m.name,
-            tool_calls: m.tool_calls
-          }))
+          ...baseMessages
         ];
 
-        // STEP 1: INITIAL MODEL CALL WITH FORCED TOOL USE
-        let response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
+        const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: selectedModel,
-            messages: apiMessages,
-            tools: JAN_TOOLS,
-            tool_choice: "required",
-            stream: false
-          }),
+          body: JSON.stringify({ model: selectedModel, messages: apiMessages, stream: true }),
           signal: activeController.signal
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        let data = await response.json();
-        let assistantMsg = data.message;
 
-        // STEP 2: EXECUTE SEARCH & SCRAPE
-        if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
-          apiMessages.push(assistantMsg);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamBuffer = '';
 
-          for (const call of assistantMsg.tool_calls) {
-            const fnName = call.function.name;
-            const fnArgs = typeof call.function.arguments === 'string' 
-              ? JSON.parse(call.function.arguments) 
-              : call.function.arguments;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-            let toolOutput = "";
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split('\n');
+          streamBuffer = lines.pop();
 
-            if (fnName === "web_search") {
-              responseContent.textContent = `🔍 Searching web for "${fnArgs.query}"...`;
-              toolOutput = await executeWebSearch(fnArgs.query);
-            } else if (fnName === "web_fetch") {
-              responseContent.textContent = `🌐 Scraping content from "${fnArgs.url}"...`;
-              toolOutput = await executeWebFetch(fnArgs.url);
-            }
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            try {
+              const parsed = JSON.parse(trimmed);
+              if (parsed.message && parsed.message.content) {
+                const chunk = parsed.message.content;
+                fullResponse += chunk;
+                
+                const chunkTokens = Math.ceil(chunk.length / 4);
+                generatedTokenCount += chunkTokens;
+                lifetimeTokens += chunkTokens;
+                updateOverallTokenStats();
 
-            apiMessages.push({
-              role: 'tool',
-              content: toolOutput,
-              name: fnName
-            });
+                responseContent.innerHTML = marked.parse(fullResponse);
+                Prism.highlightAllUnder(responseContent);
+                
+                if (!userScrolledUp) scrollToBottom();
+              }
+            } catch (e) {}
           }
+        }
 
-          // STEP 3: STREAM FINAL RESPONSE USING TOOL RESULTS
-          responseContent.textContent = '';
-          const finalRes = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: selectedModel,
-              messages: apiMessages,
-              stream: true
-            }),
-            signal: activeController.signal
-          });
-
-          const reader = finalRes.body.getReader();
-          const decoder = new TextDecoder();
-          let streamBuffer = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            streamBuffer += decoder.decode(value, { stream: true });
-            const lines = streamBuffer.split('\n');
-            streamBuffer = lines.pop();
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed) continue;
-              try {
-                const parsed = JSON.parse(trimmed);
-                if (parsed.message && parsed.message.content) {
-                  const chunk = parsed.message.content;
-                  fullResponse += chunk;
-                  
-                  generatedTokenCount += Math.ceil(chunk.length / 4);
-                  lifetimeTokens += Math.ceil(chunk.length / 4);
-                  updateOverallTokenStats();
-
-                  responseContent.innerHTML = marked.parse(fullResponse);
-                  Prism.highlightAllUnder(responseContent);
-                  if (!userScrolledUp) scrollToBottom();
-                }
-              } catch (e) {}
+        if (streamBuffer.trim()) {
+          try {
+            const parsed = JSON.parse(streamBuffer.trim());
+            if (parsed.message && parsed.message.content) {
+              fullResponse += parsed.message.content;
+              responseContent.innerHTML = marked.parse(fullResponse);
+              Prism.highlightAllUnder(responseContent);
+              if (!userScrolledUp) scrollToBottom();
             }
-          }
-        } else {
-          fullResponse = assistantMsg.content || '';
-          responseContent.innerHTML = marked.parse(fullResponse);
-          Prism.highlightAllUnder(responseContent);
+          } catch (e) {}
         }
 
         const durationSec = (performance.now() - startTime) / 1000;
@@ -990,7 +871,7 @@ CONCISENESS RULES:
             saveSessions();
           } else { botRow.remove(); }
         } else {
-          responseContent.textContent = `Error: ${err.message}`;
+          responseContent.textContent = `Connection error: ${err.message}. Check your TUNNEL_BASE_URL.`;
           responseContent.style.color = '#ef4444';
         }
       } finally {
