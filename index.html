@@ -118,7 +118,6 @@
       text-overflow: ellipsis;
     }
 
-    /* Always visible delete button */
     .delete-item-btn {
       background: transparent;
       border: none;
@@ -481,7 +480,7 @@
       fill: currentColor;
     }
 
-    /* Bottom Right Version Tag */
+    /* Version Tag */
     .version-tag {
       position: absolute;
       bottom: 6px;
@@ -556,9 +555,10 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.3.2</div>
+  <div class="version-tag">v1.3.4</div>
 
   <script>
+    // ⚠️ Remember to update TUNNEL_BASE_URL whenever cloudflared restarts
     const TUNNEL_BASE_URL = "https://org-myers-finances-pressure.trycloudflare.com";
     const modelName = "hf.co/janhq/Jan-v3.5-4B-gguf:Q4_K_M";
     const MAX_CONTEXT_CHARS = 24000;
@@ -607,7 +607,7 @@
       navigator.clipboard.writeText(code).then(() => {
         btn.innerHTML = `✓ Copied!`;
         setTimeout(() => {
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"></path></svg> Copy`;
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy`;
         }, 2000);
       });
     }
@@ -668,7 +668,7 @@
       sessions.forEach(session => {
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        
+
         let touchFired = false;
 
         const handleSelect = () => {
@@ -701,7 +701,7 @@
         deleteBtn.className = 'delete-item-btn';
         deleteBtn.title = 'Delete Chat';
         deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-        
+
         let btnTouchFired = false;
 
         deleteBtn.addEventListener('touchend', (e) => {
@@ -897,7 +897,7 @@
       try {
         const systemPrompt = {
           role: 'system',
-          content: 'You are a helpful, intelligent, and precise AI assistant. Provide clear, accurate, and concise responses to the user requests.'
+          content: 'You are a helpful, intelligent, and precise AI assistant. Provide clear, accurate, and concise responses to user requests.'
         };
 
         const apiMessages = [
@@ -916,10 +916,10 @@
           signal: activeController.signal
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder('utf-8');
         let streamBuffer = '';
 
         while (true) {
@@ -928,40 +928,60 @@
 
           streamBuffer += decoder.decode(value, { stream: true });
           const lines = streamBuffer.split('\n');
-          streamBuffer = lines.pop();
+          streamBuffer = lines.pop(); // Hold incomplete chunk
 
           for (const line of lines) {
-            const trimmed = line.trim();
+            let trimmed = line.trim();
             if (!trimmed) continue;
+
+            // Strip SSE data: prefix if present
+            if (trimmed.startsWith('data: ')) {
+              trimmed = trimmed.substring(6).trim();
+            }
+            if (trimmed === '[DONE]') continue;
+
             try {
               const parsed = JSON.parse(trimmed);
-              if (parsed.message && parsed.message.content) {
-                const chunk = parsed.message.content;
-                fullResponse += chunk;
-                const chunkTokens = Math.ceil(chunk.length / 4);
+
+              // Supports standard Ollama, OpenAI delta, and llama.cpp response formats
+              const contentChunk = parsed.message?.content || parsed.choices?.[0]?.delta?.content || parsed.response || '';
+
+              if (contentChunk) {
+                fullResponse += contentChunk;
+                const chunkTokens = Math.ceil(contentChunk.length / 4);
                 generatedTokenCount += chunkTokens;
                 lifetimeTokens += chunkTokens;
                 updateOverallTokenStats();
 
                 responseContent.innerHTML = marked.parse(fullResponse);
                 Prism.highlightAllUnder(responseContent);
-                
+
                 if (!userScrolledUp) scrollToBottom();
               }
-            } catch (e) {}
+            } catch (e) {
+              console.warn('Skipped non-JSON line:', line);
+            }
           }
         }
 
         if (streamBuffer.trim()) {
+          let trimmed = streamBuffer.trim();
+          if (trimmed.startsWith('data: ')) trimmed = trimmed.substring(6).trim();
           try {
-            const parsed = JSON.parse(streamBuffer.trim());
-            if (parsed.message && parsed.message.content) {
-              fullResponse += parsed.message.content;
+            const parsed = JSON.parse(trimmed);
+            const contentChunk = parsed.message?.content || parsed.choices?.[0]?.delta?.content || parsed.response || '';
+            if (contentChunk) {
+              fullResponse += contentChunk;
               responseContent.innerHTML = marked.parse(fullResponse);
               Prism.highlightAllUnder(responseContent);
               if (!userScrolledUp) scrollToBottom();
             }
           } catch (e) {}
+        }
+
+        if (!fullResponse.trim()) {
+          responseContent.textContent = "Received empty response from backend.";
+          responseContent.style.color = '#eab308';
         }
 
         const endTime = performance.now();
@@ -976,7 +996,7 @@
 
         session.messages.push({
           role: 'assistant',
-          content: fullResponse,
+          content: fullResponse || "Received empty response from backend.",
           speed: speedText
         });
         saveSessions();
@@ -994,7 +1014,8 @@
             botRow.remove();
           }
         } else {
-          responseContent.textContent = `Connection error: ${err.message}. Check your TUNNEL_BASE_URL.`;
+          console.error(err);
+          responseContent.textContent = `Connection error: ${err.message}. Ensure TUNNEL_BASE_URL is active.`;
           responseContent.style.color = '#ef4444';
         }
       } finally {
