@@ -324,8 +324,45 @@
       padding-left: 0;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
       width: 100%;
+    }
+
+    /* Thinking Section Styles */
+    .thinking-wrapper {
+      border-left: 2px solid var(--border-color);
+      padding-left: 12px;
+      margin-bottom: 8px;
+    }
+
+    .thinking-header {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .thinking-header:hover {
+      color: var(--accent-color);
+    }
+
+    .thinking-content {
+      font-size: 0.9rem;
+      color: #6b7280;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      transition: max-height 0.2s ease, opacity 0.2s ease;
+    }
+
+    .thinking-wrapper.collapsed .thinking-content {
+      display: none;
     }
 
     .token-speed-tag {
@@ -504,7 +541,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.7.0</div>
+  <div class="version-tag">v1.8.0</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://privacy-needs-described-political.trycloudflare.com";
@@ -687,6 +724,53 @@
       renderCurrentChat();
     }
 
+    function parseThinkingAndContent(rawText) {
+      let thinking = "";
+      let content = rawText;
+
+      const thinkMatch = rawText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+      if (thinkMatch) {
+        thinking = thinkMatch[1];
+        content = rawText.replace(/<think>[\s\S]*?(?:<\/think>|$)/i, '').trimStart();
+      }
+
+      return { thinking, content };
+    }
+
+    function renderBotMessage(container, rawText) {
+      const { thinking, content } = parseThinkingAndContent(rawText);
+      container.innerHTML = '';
+
+      if (thinking) {
+        const thinkingWrapper = document.createElement('div');
+        thinkingWrapper.className = 'thinking-wrapper';
+
+        const thinkingHeader = document.createElement('div');
+        thinkingHeader.className = 'thinking-header';
+        thinkingHeader.innerHTML = `🧠 Thinking process <span>▼</span>`;
+        thinkingHeader.onclick = () => {
+          thinkingWrapper.classList.toggle('collapsed');
+          thinkingHeader.querySelector('span').textContent = thinkingWrapper.classList.contains('collapsed') ? '▶' : '▼';
+        };
+
+        const thinkingContent = document.createElement('div');
+        thinkingContent.className = 'thinking-content';
+        thinkingContent.textContent = thinking;
+
+        thinkingWrapper.appendChild(thinkingHeader);
+        thinkingWrapper.appendChild(thinkingContent);
+        container.appendChild(thinkingWrapper);
+      }
+
+      if (content || !thinking) {
+        const responseContent = document.createElement('div');
+        responseContent.className = 'response-content';
+        responseContent.innerHTML = marked.parse(content);
+        container.appendChild(responseContent);
+        Prism.highlightAllUnder(responseContent);
+      }
+    }
+
     function renderCurrentChat() {
       chatBox.innerHTML = '';
       const session = sessions.find(s => s.id === currentSessionId);
@@ -700,13 +784,13 @@
           row.querySelector('.message').textContent = msg.content;
         } else {
           let speedTagHtml = msg.speed ? `<div class="token-speed-tag">⚡ ${msg.speed}</div>` : '';
-          row.innerHTML = `<div class="message bot"><div class="response-content"></div>${speedTagHtml}</div>`;
-          row.querySelector('.response-content').innerHTML = marked.parse(msg.content);
+          row.innerHTML = `<div class="message bot"><div class="bot-body"></div>${speedTagHtml}</div>`;
+          const botBody = row.querySelector('.bot-body');
+          renderBotMessage(botBody, msg.content);
         }
         chatBox.appendChild(row);
       });
 
-      Prism.highlightAll();
       scrollToBottom();
       updateOverallTokenStats();
     }
@@ -778,9 +862,9 @@
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">Thinking...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="bot-body"><div class="response-content">Thinking...</div></div></div>`;
       chatBox.appendChild(botRow);
-      const responseContent = botRow.querySelector('.response-content');
+      const botBody = botRow.querySelector('.bot-body');
 
       userScrolledUp = false;
       scrollToBottom();
@@ -789,9 +873,9 @@
       let webContext = "";
 
       if (isSearchEnabled) {
-        responseContent.textContent = "🔍 Searching web...";
+        botBody.innerHTML = `<div class="response-content">🔍 Searching web...</div>`;
         webContext = await searchDuckDuckGo(prompt);
-        responseContent.textContent = "Thinking...";
+        botBody.innerHTML = `<div class="response-content">Thinking...</div>`;
       }
 
       activeController = new AbortController();
@@ -824,7 +908,6 @@
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let streamBuffer = '';
-        let isFirstChunk = true;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -840,10 +923,6 @@
             try {
               const parsed = JSON.parse(trimmed);
               if (parsed.message && parsed.message.content) {
-                if (isFirstChunk) {
-                  responseContent.textContent = '';
-                  isFirstChunk = false;
-                }
                 const chunk = parsed.message.content;
                 fullResponse += chunk;
                 
@@ -852,8 +931,7 @@
                 lifetimeTokens += chunkTokens;
                 updateOverallTokenStats();
 
-                responseContent.innerHTML = marked.parse(fullResponse);
-                Prism.highlightAllUnder(responseContent);
+                renderBotMessage(botBody, fullResponse);
                 if (!userScrolledUp) scrollToBottom();
               }
             } catch (e) {}
@@ -879,8 +957,7 @@
             saveSessions();
           } else { botRow.remove(); }
         } else {
-          responseContent.textContent = `Connection error: ${err.message}. Check TUNNEL_BASE_URL.`;
-          responseContent.style.color = '#ef4444';
+          botBody.innerHTML = `<div class="response-content" style="color:#ef4444;">Connection error: ${err.message}. Check TUNNEL_BASE_URL.</div>`;
         }
       } finally {
         if (activeController && activeController.signal.aborted === false) activeController = null;
