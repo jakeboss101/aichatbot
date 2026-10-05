@@ -478,7 +478,7 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.9</div>
+  <div class="version-tag">v2.0-search</div>
 
   <!-- ========================================== -->
   <!--               JAVASCRIPT                   -->
@@ -501,8 +501,7 @@ CODING RULES:
 - ALWAYS ask the user for confirmation and clarify requirements BEFORE generating or writing any code. Do not output code immediately upon request without asking first.
 
 CONCISENESS RULES:
-- Keep answers strictly direct and under 100 words. Avoid fluff.
-
+- Keep answers strictly direct and under 100 words. Avoid fluff.`;
 
     let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
@@ -512,6 +511,34 @@ CONCISENESS RULES:
 
     const chatBox = document.getElementById('chat-box');
     const textarea = document.getElementById('user-input');
+
+    // ==========================================
+    // JS: WEB SEARCH HELPER
+    // ==========================================
+    async function fetchWebSearchResults(query) {
+      try {
+        const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        let snippets = [];
+
+        if (data.AbstractText) {
+          snippets.push(`Abstract: ${data.AbstractText}`);
+        }
+
+        if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+          data.RelatedTopics.slice(0, 3).forEach(item => {
+            if (item.Text) snippets.push(`- ${item.Text}`);
+          });
+        }
+
+        return snippets.length > 0 ? snippets.join('\n') : null;
+      } catch (err) {
+        console.error('Search error:', err);
+        return null;
+      }
+    }
 
     // ==========================================
     // JS: MARKDOWN & SYNTAX HIGHLIGHTING
@@ -530,7 +557,6 @@ CONCISENESS RULES:
       const code = (typeof token === 'object' ? token.text : token) || '';
       const language = ((typeof token === 'object' ? token.lang : arguments[1]) || 'plaintext').toLowerCase();
       
-      // Do not render ASCII art or plain text inside stylized code blocks
       if (language === 'plaintext' || language === 'text' || language === '') {
         return `<p style="white-space: pre-wrap;">${escapeHtml(code)}</p>`;
       }
@@ -780,7 +806,7 @@ CONCISENESS RULES:
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">🔍 Searching web & thinking...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
@@ -793,10 +819,17 @@ CONCISENESS RULES:
       let fullResponse = '';
 
       try {
+        const searchSnippets = await fetchWebSearchResults(prompt);
+
+        let dynamicSystemPrompt = SYSTEM_PROMPT;
+        if (searchSnippets) {
+          dynamicSystemPrompt += `\n\nWEB SEARCH RESULTS FOR CONTEXT:\n${searchSnippets}\n\nUse the above results if relevant to answer accurately.`;
+        }
+
         const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
         
         const apiMessages = [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: dynamicSystemPrompt },
           ...baseMessages
         ];
 
@@ -816,6 +849,8 @@ CONCISENESS RULES:
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        responseContent.textContent = '';
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
