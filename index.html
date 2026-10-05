@@ -133,9 +133,18 @@
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      padding: 2px;
+      padding: 4px;
       border-radius: 4px;
       opacity: 0.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .delete-chat-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
     }
 
     .history-item:hover .delete-chat-btn {
@@ -403,7 +412,7 @@
       border: none;
       outline: none;
       color: var(--text-main);
-      font-size: 1rem; /* Minimum 16px equivalent prevents iOS auto-zoom */
+      font-size: 1rem;
       resize: none;
       height: 24px;
       max-height: 120px;
@@ -591,7 +600,12 @@
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
         item.onclick = () => { currentSessionId = session.id; renderSidebar(); renderCurrentChat(); closeSidebar(); };
-        item.innerHTML = `<span class="history-title">${session.title || 'Chat'}</span><button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${session.id}')">×</button>`;
+        item.innerHTML = `
+          <span class="history-title">${session.title || 'Chat'}</span>
+          <button class="delete-chat-btn" title="Delete chat" onclick="event.stopPropagation(); deleteChat('${session.id}')">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+        `;
         historyList.appendChild(item);
       });
     }
