@@ -91,66 +91,6 @@
       transform: scale(0.98);
     }
 
-    /* Toggle Control Card */
-    .toggle-card {
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 8px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .toggle-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 36px;
-      height: 20px;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background-color: var(--border-color);
-      transition: .2s;
-      border-radius: 20px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .2s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider {
-      background-color: var(--accent-color);
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(16px);
-      background-color: #0f172a;
-    }
-
     .chat-history-list {
       flex: 1;
       overflow-y: auto;
@@ -411,16 +351,76 @@
       background-color: var(--input-bg);
       border: 1px solid var(--border-color);
       border-radius: 28px;
-      padding: 10px 12px 10px 20px;
+      padding: 8px 12px 8px 12px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .input-card:focus-within {
       border-color: var(--accent-color);
       box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    }
+
+    /* Thinking Toggle inside Input Card */
+    .input-toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-right: 8px;
+      border-right: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .toggle-text {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 18px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--border-color);
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-color);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(14px);
+      background-color: #0f172a;
     }
 
     textarea {
@@ -499,6 +499,10 @@
       h1 {
         font-size: 0.95rem;
       }
+
+      .toggle-text {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -511,15 +515,6 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       New Chat
     </button>
-    
-    <!-- Reasoning Toggle -->
-    <div class="toggle-card">
-      <span class="toggle-label">Thinking</span>
-      <label class="switch">
-        <input type="checkbox" id="thinking-toggle" onchange="toggleThinkingSetting(this.checked)">
-        <span class="slider"></span>
-      </label>
-    </div>
 
     <div id="chat-history-list" class="chat-history-list"></div>
 
@@ -551,14 +546,24 @@
 
     <div class="input-wrapper">
       <div class="input-card">
+        <!-- Thinking Toggle moved to left side of input box -->
+        <div class="input-toggle-wrapper" title="Toggle Reasoning / Thinking">
+          <span class="toggle-text">Think</span>
+          <label class="switch">
+            <input type="checkbox" id="thinking-toggle" onchange="toggleThinkingSetting(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+
         <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+        
         <button id="send-btn" class="send-btn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
     </div>
 
-    <div class="app-version">v1.1</div>
+    <div class="app-version">v1.0</div>
   </div>
 
   <script>
