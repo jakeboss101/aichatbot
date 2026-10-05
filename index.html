@@ -93,9 +93,7 @@
       transition: opacity 0.2s;
     }
 
-    .new-chat-btn:hover {
-      opacity: 0.9;
-    }
+    .new-chat-btn:hover { opacity: 0.9; }
 
     .chat-history-list {
       flex: 1;
@@ -147,9 +145,7 @@
       opacity: 0.6;
     }
 
-    .history-item:hover .delete-chat-btn {
-      opacity: 1;
-    }
+    .history-item:hover .delete-chat-btn { opacity: 1; }
 
     .delete-chat-btn:hover {
       color: var(--danger-color);
@@ -173,9 +169,7 @@
       transition: background 0.2s;
     }
 
-    .delete-all-btn:hover {
-      background-color: rgba(239, 68, 68, 0.1);
-    }
+    .delete-all-btn:hover { background-color: rgba(239, 68, 68, 0.1); }
 
     .sidebar-footer {
       font-size: 0.75rem;
@@ -239,8 +233,31 @@
       color: var(--text-main);
     }
 
-    .glow-name {
-      color: var(--accent-color);
+    .glow-name { color: var(--accent-color); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .location-badge {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background-color: rgba(255, 255, 255, 0.03);
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .location-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #10b981;
     }
 
     .token-counter {
@@ -253,9 +270,7 @@
       border: 1px solid var(--border-color);
     }
 
-    .token-counter span {
-      color: var(--accent-color);
-    }
+    .token-counter span { color: var(--accent-color); }
 
     #chat-box {
       flex: 1;
@@ -301,7 +316,6 @@
       width: 100%;
     }
 
-    /* Markdown styling inside bot message */
     .response-content p { margin-bottom: 0.8em; }
     .response-content p:last-child { margin-bottom: 0; }
     .response-content code {
@@ -359,9 +373,7 @@
       transition: border-color 0.2s;
     }
 
-    .input-card:focus-within {
-      border-color: var(--accent-color);
-    }
+    .input-card:focus-within { border-color: var(--accent-color); }
 
     .input-controls {
       display: flex;
@@ -460,6 +472,7 @@
       }
       .sidebar.open { transform: translateX(0); }
       .toggle-text { display: none; }
+      .location-badge { display: none; }
     }
   </style>
 </head>
@@ -483,7 +496,13 @@
           <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
         </div>
       </div>
-      <div class="token-counter">Tokens: <span id="total-tokens">0</span></div>
+      <div class="header-right">
+        <div id="location-badge" class="location-badge">
+          <span class="dot"></span>
+          <span id="location-text">Locating...</span>
+        </div>
+        <div class="token-counter">Tokens: <span id="total-tokens">0</span></div>
+      </div>
     </header>
 
     <div id="chat-box"></div>
@@ -526,7 +545,7 @@
       }
     };
 
-    // Application State
+    // State object including client context
     let state = {
       sessions: JSON.parse(localStorage.getItem(CONFIG.keys.sessions) || '[]'),
       totalTokens: parseInt(localStorage.getItem(CONFIG.keys.tokens) || '0', 10),
@@ -534,10 +553,15 @@
       enableSearch: JSON.parse(localStorage.getItem(CONFIG.keys.search) ?? 'false'),
       currentSessionId: null,
       abortController: null,
-      isGenerating: false
+      isGenerating: false,
+      userInfo: {
+        ip: 'Unknown',
+        location: 'Unknown Location',
+        isp: 'Unknown ISP'
+      }
     };
 
-    // DOM Elements
+    // DOM References
     const elements = {
       sidebar: document.getElementById('sidebar'),
       sidebarOverlay: document.getElementById('sidebar-overlay'),
@@ -547,10 +571,11 @@
       sendBtn: document.getElementById('send-btn'),
       totalTokens: document.getElementById('total-tokens'),
       thinkingToggle: document.getElementById('thinking-toggle'),
-      searchToggle: document.getElementById('search-toggle')
+      searchToggle: document.getElementById('search-toggle'),
+      locationText: document.getElementById('location-text')
     };
 
-    // Setup Highlight.js with Marked
+    // Setup Marked with Highlight.js
     marked.setOptions({
       highlight: function(code, lang) {
         const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -559,8 +584,29 @@
       langPrefix: 'hljs language-'
     });
 
-    // Initialize UI Event Handlers
+    // Fetch IP and Location Metadata
+    async function fetchUserContext() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+          const data = await res.json();
+          state.userInfo = {
+            ip: data.ip || 'Unknown',
+            location: `${data.city || ''}, ${data.region || ''}, ${data.country_name || ''}`.replace(/^, |, $/g, ''),
+            isp: data.org || 'Unknown ISP'
+          };
+          elements.locationText.textContent = `${state.userInfo.location} (${state.userInfo.ip})`;
+        } else {
+          throw new Error('Location lookup failed');
+        }
+      } catch (err) {
+        elements.locationText.textContent = 'Location Unavailable';
+      }
+    }
+
     function init() {
+      fetchUserContext();
+
       elements.thinkingToggle.checked = state.enableThinking;
       elements.searchToggle.checked = state.enableSearch;
 
@@ -724,6 +770,22 @@
       sendMessage(prompt);
     }
 
+    // Constructs dynamic system prompt payload with metadata
+    function generateSystemPrompt() {
+      const now = new Date();
+      return {
+        role: 'system',
+        content: `User Context Information:
+- Current Local Date & Time: ${now.toString()}
+- ISO Timestamp: ${now.toISOString()}
+- IP Address: ${state.userInfo.ip}
+- Approximate Location: ${state.userInfo.location}
+- ISP: ${state.userInfo.isp}
+
+Use this context naturally if relevant to the conversation (e.g., answering localized or time-sensitive questions).`
+      };
+    }
+
     async function sendMessage(prompt) {
       const session = state.sessions.find(s => s.id === state.currentSessionId);
       if (!session) return;
@@ -736,18 +798,15 @@
       saveSessions();
       renderSidebar();
 
-      // Clear & resize input
       elements.userInput.value = '';
       autoResizeTextarea();
 
-      // Render User Message
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
       userRow.querySelector('.message').textContent = prompt;
       elements.chatBox.appendChild(userRow);
 
-      // Render Empty Bot Response
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
       botRow.innerHTML = `
@@ -765,7 +824,6 @@
       const responseContent = botRow.querySelector('.response-content');
       scrollToBottom();
 
-      // Controller State setup
       state.abortController = new AbortController();
       state.isGenerating = true;
       elements.sendBtn.classList.add('stop');
@@ -773,13 +831,19 @@
       let fullThinking = '';
       let fullResponse = '';
 
+      // Create payload: Inject system metadata prompt ahead of chat history
+      const formattedMessages = [
+        generateSystemPrompt(),
+        ...session.messages.map(m => ({ role: m.role, content: m.content }))
+      ];
+
       try {
         const response = await fetch(`${CONFIG.baseUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: CONFIG.modelName,
-            messages: session.messages.map(m => ({ role: m.role, content: m.content })),
+            messages: formattedMessages,
             think: state.enableThinking,
             search: state.enableSearch,
             stream: true
@@ -799,7 +863,7 @@
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // Retain unfinished chunk line
+          buffer = lines.pop();
 
           for (const line of lines) {
             if (!line.trim()) continue;
@@ -822,9 +886,7 @@
                 updateTotalTokensDisplay();
               }
               scrollToBottom();
-            } catch (err) {
-              // Ignore partial chunk parse failures
-            }
+            } catch (err) {}
           }
         }
 
@@ -843,7 +905,6 @@
       }
     }
 
-    // Start App
     init();
   </script>
 </body>
