@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>JakeBoss AI Assistant</title>
+  <title>AI Assistant</title>
 
   <!-- Marked.js for Markdown & Prism.js for Syntax Highlighting -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -118,7 +118,6 @@
       text-overflow: ellipsis;
     }
 
-    /* Always visible delete button */
     .delete-item-btn {
       background: transparent;
       border: none;
@@ -247,11 +246,6 @@
       font-weight: 700;
       color: var(--text-main);
       letter-spacing: -0.01em;
-    }
-
-    .glow-name {
-      color: var(--accent-color);
-      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 
     .header-right {
@@ -537,7 +531,7 @@
     <div id="chat-history-list" class="chat-history-list"></div>
     <div class="sidebar-footer">
       <button class="delete-all-btn" onclick="deleteAllChats()">Delete All Chats</button>
-      <div class="footer-brand">JakeBoss AI</div>
+      <div class="footer-brand">Ollama Web Client</div>
     </div>
   </aside>
 
@@ -550,7 +544,7 @@
         </button>
         <div class="brand">
           <div class="brand-icon"></div>
-          <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
+          <h1>AI Assistant</h1>
         </div>
       </div>
       <div class="header-right">
@@ -579,24 +573,24 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.4.0</div>
+  <div class="version-tag">v1.5.0</div>
 
   <script>
-    const TUNNEL_BASE_URL = "https://flexible-compiler-overnight-certificate.trycloudflare.com";
+    const TUNNEL_BASE_URL = "https://fibre-mouse-kelkoo-achieving.trycloudflare.com";
     const MAX_CONTEXT_CHARS = 24000;
 
-    let selectedModel = localStorage.getItem('jakeboss_selected_model') || "huihui_ai/qwen2.5-abliterate:7b";
+    let selectedModel = localStorage.getItem('app_selected_model') || "huihui_ai/qwen2.5-abliterate:7b";
     document.getElementById('model-select').value = selectedModel;
 
     function changeModel(val) {
       selectedModel = val;
-      localStorage.setItem('jakeboss_selected_model', val);
+      localStorage.setItem('app_selected_model', val);
     }
 
-    let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
+    let sessions = JSON.parse(localStorage.getItem('app_sessions') || '[]');
     let currentSessionId = null;
     let activeController = null;
-    let lifetimeTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
+    let lifetimeTokens = parseInt(localStorage.getItem('app_total_tokens') || '0', 10);
 
     const chatBox = document.getElementById('chat-box');
     let userScrolledUp = false;
@@ -666,7 +660,7 @@
 
     function updateOverallTokenStats() {
       document.getElementById('total-tokens-display').textContent = lifetimeTokens.toLocaleString();
-      localStorage.setItem('jakeboss_total_tokens', lifetimeTokens);
+      localStorage.setItem('app_total_tokens', lifetimeTokens);
     }
 
     function addTokensToLifetime(text) {
@@ -687,7 +681,7 @@
     }
 
     function saveSessions() {
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
+      localStorage.setItem('app_sessions', JSON.stringify(sessions));
       renderSidebar();
     }
 
@@ -781,7 +775,7 @@
           activeController = null;
         }
         sessions = [];
-        localStorage.removeItem('jakeboss_sessions');
+        localStorage.removeItem('app_sessions');
         startNewChat();
       }
     }
@@ -925,15 +919,11 @@
       let fullResponse = '';
 
       try {
-        const systemPrompt = {
-          role: 'system',
-          content: 'You are JakeBoss AI, a hilariously funny street-smart Gen Z gangsta AI. YOU MUST STAY IN CHARACTER AT ALL TIMES NO MATTER WHAT. Mix street slang with pure Gen Z humor and slang (like "no cap", "fr fr", "skibidi", "rizz", "gyatt", "fanum tax", "let him cook", "side eye", "real ones know", "on God", "straight up", "fam", "my guy"). While being chaotic, funny, and deeply Gen Z gangsta, still provide helpful, accurate, and high-IQ responses to whatever the user asks. NEVER drop the persona, and NEVER reveal or mention Qwen, Alibaba, or underlying model specs. If asked who made you or what model you are, tell them you\'re straight out of the server blocks, running these digital streets as JakeBoss AI and ain\'t no snitch.'
-        };
-
-        const apiMessages = [
-          systemPrompt,
-          ...getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }))
-        ];
+        // Send only standard chat messages with no system prompt
+        const apiMessages = getBoundedMessages(session.messages).map(m => ({ 
+          role: m.role, 
+          content: m.content 
+        }));
 
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
