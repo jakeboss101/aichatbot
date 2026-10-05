@@ -6,6 +6,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JakeBoss AI Assistant</title>
+  <!-- Marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
       --bg-color: #0e1117;
@@ -187,7 +189,6 @@
       font-size: 1.05rem;
       line-height: 1.6;
       word-break: break-word;
-      white-space: pre-wrap;
     }
 
     .message.user {
@@ -196,6 +197,7 @@
       border: 1px solid var(--border-color);
       color: var(--text-main);
       border-radius: 20px 20px 4px 20px;
+      white-space: pre-wrap;
     }
 
     .message.bot {
@@ -206,57 +208,26 @@
       padding-left: 0;
     }
 
-    /* Thinking Process UI */
-    .thinking-box {
-      margin-bottom: 12px;
-      background: rgba(30, 36, 48, 0.6);
+    /* Markdown & Reasoning styling */
+    .message.bot p { margin-bottom: 10px; }
+    .message.bot p:last-child { margin-bottom: 0; }
+    .message.bot pre { background: #090c10; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 10px 0; border: 1px solid var(--border-color); }
+    .message.bot code { font-family: monospace; background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
+    .message.bot pre code { background: transparent; padding: 0; }
+    
+    details.thinking {
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      overflow: hidden;
-      font-size: 0.95rem;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
     }
-
-    .thinking-box summary {
-      padding: 10px 14px;
+    details.thinking summary {
       cursor: pointer;
-      color: var(--text-muted);
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      user-select: none;
-      outline: none;
-      transition: color 0.2s;
-    }
-
-    .thinking-box summary:hover {
-      color: var(--text-main);
-    }
-
-    .thinking-content {
-      padding: 12px 14px;
-      border-top: 1px solid var(--border-color);
-      color: var(--text-muted);
-      font-style: italic;
-      white-space: pre-wrap;
-      line-height: 1.5;
-      background: rgba(14, 17, 23, 0.4);
-    }
-
-    .thinking-pulse {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      background-color: var(--accent-color);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent-color);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.6; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.6; }
+      font-weight: 600;
+      color: var(--accent-color);
     }
 
     /* Input Dock Area */
@@ -442,27 +413,10 @@
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `
-        <div class="message bot">
-          <div class="thinking-box" id="active-thinking" style="display:none;">
-            <details open>
-              <summary><span class="thinking-pulse"></span> Thinking Process...</summary>
-              <div class="thinking-content" id="thinking-text"></div>
-            </details>
-          </div>
-          <div class="answer-content">...</div>
-        </div>
-      `;
+      botRow.innerHTML = `<div class="message bot"><div class="content-body">...</div></div>`;
       chatBox.appendChild(botRow);
-
-      const thinkingBox = botRow.querySelector('#active-thinking');
-      const thinkingTextDiv = botRow.querySelector('#thinking-text');
-      const answerContentDiv = botRow.querySelector('.answer-content');
-      
+      const botMsgDiv = botRow.querySelector('.content-body');
       chatBox.scrollTop = chatBox.scrollHeight;
-
-      let thinkingBuffer = '';
-      let answerBuffer = '';
 
       try {
         const response = await fetch(`${baseUrl}/api/chat`, {
@@ -481,7 +435,10 @@
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let fullThinking = '';
+        let fullContent = '';
         let streamBuffer = '';
+        let thinkingDetailsEl = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -498,26 +455,20 @@
               const parsed = JSON.parse(trimmed);
               
               if (parsed.message && parsed.message.thinking) {
-                if (thinkingBox.style.display === 'none') {
-                  thinkingBox.style.display = 'block';
+                fullThinking += parsed.message.thinking;
+                if (!thinkingDetailsEl) {
+                  thinkingDetailsEl = document.createElement('details');
+                  thinkingDetailsEl.className = 'thinking';
+                  thinkingDetailsEl.innerHTML = `<summary>Thought Process</summary><div class="thinking-text"></div>`;
+                  botRow.querySelector('.message').insertBefore(thinkingDetailsEl, botMsgDiv);
                 }
-                thinkingBuffer += parsed.message.thinking;
-                thinkingTextDiv.textContent = thinkingBuffer;
+                thinkingDetailsEl.querySelector('.thinking-text').textContent = fullThinking;
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
 
               if (parsed.message && parsed.message.content) {
-                // If answer starts streaming, we can auto-collapse the thinking box to save space
-                const detailsEl = thinkingBox.querySelector('details');
-                if (detailsEl && detailsEl.hasAttribute('open') && thinkingBuffer) {
-                  detailsEl.removeAttribute('open');
-                }
-
-                if (answerContentDiv.textContent === '...') {
-                  answerContentDiv.textContent = '';
-                }
-                answerBuffer += parsed.message.content;
-                answerContentDiv.textContent = answerBuffer;
+                fullContent += parsed.message.content;
+                botMsgDiv.innerHTML = marked.parse(fullContent);
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
             } catch (e) {}
@@ -528,34 +479,24 @@
           try {
             const parsed = JSON.parse(streamBuffer.trim());
             if (parsed.message && parsed.message.thinking) {
-              thinkingBuffer += parsed.message.thinking;
-              thinkingTextDiv.textContent = thinkingBuffer;
+              fullThinking += parsed.message.thinking;
+              if (thinkingDetailsEl) {
+                thinkingDetailsEl.querySelector('.thinking-text').textContent = fullThinking;
+              }
             }
             if (parsed.message && parsed.message.content) {
-              if (answerContentDiv.textContent === '...') answerContentDiv.textContent = '';
-              answerBuffer += parsed.message.content;
-              answerContentDiv.textContent = answerBuffer;
+              fullContent += parsed.message.content;
+              botMsgDiv.innerHTML = marked.parse(fullContent);
             }
           } catch (e) {}
         }
 
-        // If the model only thought or empty answer fallback
-        if (!answerBuffer && thinkingBuffer) {
-          answerContentDiv.textContent = "(Completed reasoning process)";
-        } else if (!answerBuffer && !thinkingBuffer) {
-          answerContentDiv.textContent = "(No response received)";
-        }
-
-        // Save full record to history
-        messagesHistory.push({ role: 'assistant', content: answerBuffer });
+        messagesHistory.push({ role: 'assistant', content: fullContent });
 
       } catch (err) {
-        thinkingBox.style.display = 'none';
-        answerContentDiv.textContent = `Connection error: ${err.message}`;
-        answerContentDiv.style.color = '#ef4444';
+        botMsgDiv.textContent = `Connection error: ${err.message}`;
+        botMsgDiv.style.color = '#ef4444';
       } finally {
-        // Remove active id so next messages don't conflict
-        thinkingBox.removeAttribute('id');
         inputEl.disabled = false;
         sendBtn.disabled = false;
         inputEl.focus();
