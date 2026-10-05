@@ -482,7 +482,7 @@
     document.getElementById('thinking-toggle').checked = enableThinking;
     document.getElementById('search-toggle').checked = enableSearch;
 
-    // Optional: Request user's GPS coordinates if allowed by browser
+    // Request GPS location if granted
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         pos => {
@@ -491,7 +491,7 @@
             longitude: pos.coords.longitude.toFixed(4)
           };
         },
-        err => { /* Location permission denied or unavailable */ },
+        err => {},
         { timeout: 5000 }
       );
     }
@@ -500,6 +500,7 @@
       document.getElementById('sidebar').classList.toggle('open');
       document.getElementById('sidebar-overlay').classList.toggle('active');
     }
+
     function closeSidebar() {
       document.getElementById('sidebar').classList.remove('open');
       document.getElementById('sidebar-overlay').classList.remove('active');
@@ -629,10 +630,7 @@
       let fullThinking = '';
       let fullResponse = '';
 
-      // Get user's local timezone (e.g. "America/Los_Angeles")
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
-
-      // Format browser's exact current local date & time
       const clientTimeFormatted = new Date().toLocaleString([], {
         weekday: 'long',
         year: 'numeric',
@@ -643,11 +641,21 @@
         timeZoneName: 'short'
       });
 
-      // Construct client location object
       const clientLocation = {
         timeZone: userTimeZone,
         coordinates: userCoordinates
       };
+
+      // Format payload messages according to thinking state
+      let formattedMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
+      
+      // Direct instruction to suppress reasoning steps when think is off
+      if (!enableThinking) {
+        formattedMessages.unshift({
+          role: 'system',
+          content: 'Do not produce reasoning, internal thoughts, or <think> tags. Respond directly with the answer.'
+        });
+      }
 
       try {
         const response = await fetch(`${baseUrl}/api/chat`, {
@@ -655,8 +663,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: modelName,
-            messages: session.messages.map(m => ({ role: m.role, content: m.content })),
+            messages: formattedMessages,
             think: enableThinking,
+            options: {
+              think: enableThinking
+            },
             search: enableSearch,
             clientTime: clientTimeFormatted,
             clientLocation: clientLocation,
@@ -684,7 +695,8 @@
             try {
               const parsed = JSON.parse(line);
 
-              if (parsed.message?.thinking) {
+              // Process thinking tokens strictly when enableThinking is true
+              if (parsed.message?.thinking && enableThinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
                 thinkingContent.textContent = fullThinking;
@@ -704,7 +716,11 @@
           }
         }
 
-        session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
+        session.messages.push({
+          role: 'assistant',
+          content: fullResponse,
+          thinking: enableThinking ? fullThinking : ''
+        });
         localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
 
       } catch (err) {
