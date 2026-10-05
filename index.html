@@ -557,7 +557,7 @@
               <span class="slider"></span>
             </label>
           </div>
-          <div class="input-toggle-item" title="Enable live DuckDuckGo web search">
+          <div class="input-toggle-item" title="Enable live web search">
             <span class="toggle-text">Search</span>
             <label class="switch">
               <input type="checkbox" id="search-toggle" onchange="toggleSearchSetting(this.checked)">
@@ -578,7 +578,7 @@
   </div>
 
   <script>
-    const baseUrl = "https://hindu-put-blogging-julie.trycloudflare.com";
+    const baseUrl = "https://remote-basis-avatar-mpeg.trycloudflare.com";
     const modelName = "qwen3.5:4b";
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
@@ -818,28 +818,49 @@
 
     async function searchDuckDuckGo(query) {
       try {
-        const proxyUrl = "https://api.allorigins.win/get?url=";
+        const proxyUrl = "https://api.allorigins.win/raw?url=";
         const targetUrl = encodeURIComponent(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const res = await fetch(proxyUrl + targetUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
-        
-        const data = await res.json();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, 'text/html');
-        const snippets = Array.from(doc.querySelectorAll('.result__snippet'))
-          .slice(0, 3)
-          .map(el => el.textContent.trim())
-          .filter(text => text.length > 0);
-        
-        return snippets.length > 0 ? snippets.join('\n- ') : '';
+
+        if (res.ok) {
+          const htmlText = await res.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlText, 'text/html');
+          
+          const snippets = Array.from(doc.querySelectorAll('.result__snippet, .result__url'))
+            .slice(0, 3)
+            .map(el => el.textContent.trim())
+            .filter(text => text.length > 0);
+
+          if (snippets.length > 0) {
+            return snippets.join('\n- ');
+          }
+        }
       } catch (err) {
-        console.warn("Search bypassed or failed:", err);
-        return "";
+        console.warn("DuckDuckGo scraping failed or timed out, trying Wikipedia fallback...", err);
       }
+
+      try {
+        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`;
+        const res = await fetch(wikiUrl);
+        const data = await res.json();
+        
+        if (data && data.query && data.query.search.length > 0) {
+          return data.query.search.slice(0, 3)
+            .map(item => item.snippet.replace(/<[^>]*>?/gm, ''))
+            .filter(text => text.length > 0)
+            .join('\n- ');
+        }
+      } catch (err) {
+        console.error("Fallback search failed:", err);
+      }
+
+      return "";
     }
 
     async function sendMessage(prompt) {
@@ -902,16 +923,15 @@
         }
 
         let apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
-        
-        let systemPrompt = '';
-        if (webContext) {
-          systemPrompt = `Live Web Search Results:\n- ${webContext}\n\nUse the above context if relevant.`;
-        } else if (!enableThinking) {
-          systemPrompt = 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.';
-        }
 
-        if (systemPrompt) {
-          apiMessages.unshift({ role: 'system', content: systemPrompt });
+        if (webContext) {
+          const lastIndex = apiMessages.length - 1;
+          apiMessages[lastIndex].content = `[Web Search Context]\n- ${webContext}\n\n[User Query]\n${prompt}`;
+        } else if (!enableThinking) {
+          apiMessages.unshift({
+            role: 'system',
+            content: 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.'
+          });
         }
 
         const requestBody = {
