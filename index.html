@@ -567,11 +567,11 @@
       </div>
     </div>
 
-    <div class="app-version">v1.5</div>
+    <div class="app-version">v1.6</div>
   </div>
 
   <script>
-    const baseUrl = "https://cottage-hewlett-collapse-terrace.trycloudflare.com";
+    const baseUrl = "https://exit-cornell-asthma-managed.trycloudflare.com";
     const modelName = "qwen3.5:4b";
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
@@ -808,6 +808,19 @@
       }
     }
 
+    function parseChunkContent(parsed) {
+      if (parsed.message && typeof parsed.message.content === 'string') {
+        return parsed.message.content;
+      }
+      if (typeof parsed.response === 'string') {
+        return parsed.response;
+      }
+      if (typeof parsed.content === 'string') {
+        return parsed.content;
+      }
+      return '';
+    }
+
     async function sendMessage(prompt) {
       const inputEl = getInputElement();
       const chatBox = document.getElementById('chat-box');
@@ -913,9 +926,10 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
 
-              if (parsed.message && parsed.message.content) {
+              const textChunk = parseChunkContent(parsed);
+              if (textChunk) {
                 if (fullResponse === '') responseContent.textContent = '';
-                fullResponse += parsed.message.content;
+                fullResponse += textChunk;
                 responseContent.textContent = fullResponse;
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
@@ -936,9 +950,10 @@
             if (enableThinking && parsed.message && parsed.message.thinking) {
               fullThinking += parsed.message.thinking;
             }
-            if (parsed.message && parsed.message.content) {
+            const textChunk = parseChunkContent(parsed);
+            if (textChunk) {
               if (fullResponse === '') responseContent.textContent = '';
-              fullResponse += parsed.message.content;
+              fullResponse += textChunk;
               responseContent.textContent = fullResponse;
             }
             if (parsed.done) {
