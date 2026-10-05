@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- ========================================== -->
-  <!--               HTML: META & SETUP           -->
-  <!-- ========================================== -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,9 +14,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 
   <style>
-    /* ========================================== */
-    /*             CSS: VARIABLES                 */
-    /* ========================================== */
     :root {
       --bg-color: #0e1117;
       --panel-bg: #161b22;
@@ -33,9 +27,6 @@
       --sidebar-width: 220px;
     }
 
-    /* ========================================== */
-    /*             CSS: BASE RESET                */
-    /* ========================================== */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -54,9 +45,6 @@
       position: relative;
     }
 
-    /* ========================================== */
-    /*             CSS: SIDEBAR                   */
-    /* ========================================== */
     .sidebar {
       width: var(--sidebar-width);
       min-width: var(--sidebar-width);
@@ -175,9 +163,6 @@
 
     .footer-brand { font-size: 0.8rem; color: var(--text-muted); text-align: center; }
 
-    /* ========================================== */
-    /*             CSS: MAIN WORKSPACE            */
-    /* ========================================== */
     .app-container {
       flex: 1;
       height: 100%;
@@ -247,9 +232,6 @@
     }
     .reset-tokens-btn:hover { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
 
-    /* ========================================== */
-    /*             CSS: CHAT AREA                 */
-    /* ========================================== */
     #chat-box {
       flex: 1;
       overflow-y: auto;
@@ -306,9 +288,6 @@
       margin-top: 4px;
     }
 
-    /* ========================================== */
-    /*             CSS: CODE BLOCKS               */
-    /* ========================================== */
     .code-block-wrapper {
       background-color: #161b22;
       border: 1px solid var(--border-color);
@@ -345,9 +324,6 @@
     .code-block-wrapper pre { margin: 0 !important; padding: 14px !important; background: transparent !important; overflow-x: auto; }
     .code-block-wrapper code { font-family: "SFMono-Regular", Consolas, monospace !important; font-size: 0.9rem !important; }
 
-    /* ========================================== */
-    /*             CSS: INPUT DOCK                */
-    /* ========================================== */
     .input-wrapper {
       padding: 12px 16px 16px 16px;
       background-color: var(--bg-color);
@@ -415,9 +391,6 @@
       z-index: 100;
     }
 
-    /* ========================================== */
-    /*             CSS: RESPONSIVE                */
-    /* ========================================== */
     @media (max-width: 768px) {
       :root { --sidebar-width: 200px; }
       .sidebar { position: absolute; height: 100%; }
@@ -427,9 +400,6 @@
 </head>
 <body>
 
-  <!-- ========================================== -->
-  <!--               HTML: SIDEBAR                -->
-  <!-- ========================================== -->
   <aside id="sidebar" class="sidebar collapsed">
     <button class="new-chat-btn" onclick="startNewChat()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -444,9 +414,6 @@
     </div>
   </aside>
 
-  <!-- ========================================== -->
-  <!--               HTML: MAIN APP               -->
-  <!-- ========================================== -->
   <div class="app-container">
     <header>
       <div class="header-left">
@@ -478,18 +445,12 @@
     </div>
   </div>
 
-  <div class="version-tag">v1.6.1</div>
+  <div class="version-tag">v1.6.2</div>
 
-  <!-- ========================================== -->
-  <!--               JAVASCRIPT                   -->
-  <!-- ========================================== -->
   <script>
-    // ==========================================
-    // JS: CONFIGURATION & GLOBAL STATE
-    // ==========================================
     const TUNNEL_BASE_URL = "https://premiere-nut-wiki-satisfaction.trycloudflare.com";
     const MAX_CONTEXT_CHARS = 24000;
-    const selectedModel = "jan3.5";
+    const selectedModel = "qwen3.5:9b";
 
     const SYSTEM_PROMPT = `You are Jake, a concise hybrid AI for code and creativity. Zero fluff. Complete code/answers only. No filler text.`;
 
@@ -502,9 +463,6 @@
     const chatBox = document.getElementById('chat-box');
     const textarea = document.getElementById('user-input');
 
-    // ==========================================
-    // JS: MARKDOWN & SYNTAX HIGHLIGHTING
-    // ==========================================
     function escapeHtml(str) {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
@@ -536,9 +494,6 @@
       } catch (err) { console.error('Copy failed:', err); }
     }
 
-    // ==========================================
-    // JS: UI & EVENT LISTENERS
-    // ==========================================
     function scrollToBottom() {
       requestAnimationFrame(() => { chatBox.scrollTop = chatBox.scrollHeight; });
     }
@@ -558,9 +513,6 @@
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
 
-    // ==========================================
-    // JS: TOKEN MANAGEMENT
-    // ==========================================
     function updateOverallTokenStats() {
       document.getElementById('total-tokens-display').textContent = lifetimeTokens.toLocaleString();
       localStorage.setItem('app_total_tokens', lifetimeTokens);
@@ -578,9 +530,6 @@
       }
     }
 
-    // ==========================================
-    // JS: SESSION MANAGEMENT
-    // ==========================================
     function cleanupEmptySessions() {
       sessions = sessions.filter(s => s.messages && s.messages.length > 0);
     }
@@ -700,9 +649,6 @@
       updateOverallTokenStats();
     }
 
-    // ==========================================
-    // JS: API INTERACTION & TOKEN EFFICIENCY
-    // ==========================================
     function getBoundedMessages(messages) {
       let totalChars = 0;
       let bounded = [];
@@ -713,6 +659,36 @@
         totalChars += msgLen;
       }
       return bounded;
+    }
+
+    // ==========================================
+    // CLIENT-SIDE WEB SEARCH VIA CORS PROXY
+    // ==========================================
+    async function searchDuckDuckGo(query) {
+      try {
+        const proxyUrl = "https://api.allorigins.win/get?url=";
+        const targetUrl = encodeURIComponent(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second cutoff
+
+        const res = await fetch(proxyUrl + targetUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        const data = await res.json();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, 'text/html');
+        const snippets = Array.from(doc.querySelectorAll('.result__snippet'))
+          .slice(0, 3)
+          .map(el => el.textContent.trim())
+          .filter(text => text.length > 0);
+        
+        return snippets.length > 0 ? snippets.join('\n- ') : '';
+      } catch (err) {
+        console.warn("Client-side search failed/timed out:", err);
+        return "";
+      }
     }
 
     async function sendMessage() {
@@ -744,13 +720,16 @@
 
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
-      botRow.innerHTML = `<div class="message bot"><div class="response-content">...</div></div>`;
+      botRow.innerHTML = `<div class="message bot"><div class="response-content">🔍 Searching web & thinking...</div></div>`;
       chatBox.appendChild(botRow);
       const responseContent = botRow.querySelector('.response-content');
 
       userScrolledUp = false;
       scrollToBottom();
 
+      // Fetch web context in browser
+      const webContext = await searchDuckDuckGo(prompt);
+      
       activeController = new AbortController();
       const startTime = performance.now();
       let generatedTokenCount = 0;
@@ -759,10 +738,15 @@
       try {
         const baseMessages = getBoundedMessages(session.messages).map(m => ({ role: m.role, content: m.content }));
         
-        // Efficient System Prompt Injection: Only sent on the very first message of a chat session
-        const apiMessages = isNewChat 
-          ? [{ role: 'system', content: SYSTEM_PROMPT }, ...baseMessages]
-          : baseMessages;
+        let customSystemPrompt = SYSTEM_PROMPT;
+        if (webContext) {
+          customSystemPrompt += `\n\nLive Web Search Results:\n- ${webContext}\n\nUse the above live context if relevant to answer the query.`;
+        }
+
+        const apiMessages = [
+          { role: 'system', content: customSystemPrompt },
+          ...baseMessages
+        ];
 
         const response = await fetch(`${TUNNEL_BASE_URL}/api/chat`, {
           method: 'POST',
@@ -776,6 +760,7 @@
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let streamBuffer = '';
+        let isFirstChunk = true;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -791,6 +776,10 @@
             try {
               const parsed = JSON.parse(trimmed);
               if (parsed.message && parsed.message.content) {
+                if (isFirstChunk) {
+                  responseContent.textContent = '';
+                  isFirstChunk = false;
+                }
                 const chunk = parsed.message.content;
                 fullResponse += chunk;
                 
@@ -813,7 +802,7 @@
 
         const speedTag = document.createElement('div');
         speedTag.className = 'token-speed-tag';
-        speedTag.textContent = `⚡ ${speedText}`;
+        speedTag.textContent = `⚡ ${speedText}${webContext ? ' • 🌐 Web' : ''}`;
         botRow.querySelector('.message.bot').appendChild(speedTag);
 
         session.messages.push({ role: 'assistant', content: fullResponse, speed: speedText });
@@ -834,9 +823,6 @@
       }
     }
 
-    // ==========================================
-    // JS: INITIALIZATION
-    // ==========================================
     cleanupEmptySessions();
     updateOverallTokenStats();
     if (sessions.length === 0) {
