@@ -18,6 +18,7 @@
       --text-muted: #9ca3af;
       --text-thinking: #6b7280;
       --input-bg: #1e2430;
+      --danger-color: #ef4444;
       --sidebar-width: 200px;
     }
 
@@ -36,9 +37,27 @@
       height: 100vh;
       height: 100dvh;
       overflow: hidden;
+      position: relative;
     }
 
-    /* Fixed Thin Permanent Sidebar */
+    /* Mobile Backdrop Overlay */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 25;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .sidebar-overlay.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Sidebar */
     .sidebar {
       width: var(--sidebar-width);
       min-width: var(--sidebar-width);
@@ -49,7 +68,8 @@
       flex-direction: column;
       padding: 12px 10px;
       gap: 12px;
-      z-index: 20;
+      z-index: 30;
+      transition: transform 0.25s ease;
     }
 
     .new-chat-btn {
@@ -87,10 +107,18 @@
       font-size: 0.85rem;
       color: var(--text-muted);
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .history-title {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      transition: background 0.15s, color 0.15s;
+      flex: 1;
     }
 
     .history-item:hover {
@@ -103,6 +131,51 @@
       color: var(--accent-color);
       font-weight: 600;
       border: 1px solid var(--border-color);
+    }
+
+    .delete-chat-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      border-radius: 4px;
+      opacity: 0.6;
+      transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+    }
+
+    .history-item:hover .delete-chat-btn {
+      opacity: 1;
+    }
+
+    .delete-chat-btn:hover {
+      color: var(--danger-color);
+      background-color: rgba(239, 68, 68, 0.15);
+    }
+
+    .delete-all-btn {
+      width: 100%;
+      background: transparent;
+      color: var(--danger-color);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .delete-all-btn:hover {
+      background-color: rgba(239, 68, 68, 0.12);
+      border-color: var(--danger-color);
     }
 
     .sidebar-footer {
@@ -122,6 +195,7 @@
       background-color: var(--bg-color);
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
+      position: relative;
     }
 
     header {
@@ -134,6 +208,22 @@
       align-items: center;
       justify-content: space-between;
       z-index: 10;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-toggle-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
     }
 
     .brand {
@@ -160,6 +250,32 @@
     .glow-name {
       color: var(--accent-color);
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    .token-counter {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background-color: var(--input-bg);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .token-counter span {
+      color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    .app-version {
+      position: absolute;
+      bottom: 6px;
+      right: 12px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 5;
     }
 
     /* Chat Messages Box */
@@ -301,35 +417,73 @@
       fill: currentColor;
     }
 
-    @media (max-width: 600px) {
-      :root {
-        --sidebar-width: 140px;
+    /* Mobile Drawer Styles */
+    @media (max-width: 768px) {
+      .menu-toggle-btn {
+        display: flex;
       }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 240px;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.4);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
       .message {
         font-size: 0.95rem;
         padding: 12px 14px;
+      }
+
+      h1 {
+        font-size: 0.95rem;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Permanent Thin Sidebar -->
-  <aside class="sidebar">
+  <!-- Backdrop Overlay for Mobile -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
     <button class="new-chat-btn" onclick="startNewChat()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       New Chat
     </button>
+    
     <div id="chat-history-list" class="chat-history-list"></div>
+
+    <button id="delete-all-btn" class="delete-all-btn" onclick="deleteAllChats()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      Delete All Chats
+    </button>
+
     <div class="sidebar-footer">JakeBoss AI</div>
   </aside>
 
   <!-- Main Workspace -->
   <div class="app-container">
     <header>
-      <div class="brand">
-        <div class="brand-icon"></div>
-        <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
+      <div class="header-left">
+        <button class="menu-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle Navigation">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <div class="brand">
+          <div class="brand-icon"></div>
+          <h1>AI Assistant by <span class="glow-name">JakeBoss</span></h1>
+        </div>
+      </div>
+      <div class="token-counter">
+        Tokens: <span id="total-tokens">0</span>
       </div>
     </header>
 
@@ -343,6 +497,8 @@
         </button>
       </div>
     </div>
+
+    <div class="app-version">v1.0</div>
   </div>
 
   <script>
@@ -350,6 +506,7 @@
     const modelName = "qwen3.5:4b";
 
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
+    let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
     let currentSessionId = null;
 
     const textarea = document.getElementById('user-input');
@@ -358,24 +515,98 @@
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
 
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const isOpen = sidebar.classList.contains('open');
+      if (isOpen) {
+        closeSidebar();
+      } else {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+      }
+    }
+
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('active');
+    }
+
     function saveSessions() {
       localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
     }
 
+    function updateTotalTokensDisplay() {
+      document.getElementById('total-tokens').textContent = totalTokens.toLocaleString();
+      localStorage.setItem('jakeboss_total_tokens', totalTokens.toString());
+    }
+
+    function removeUnusedSessions(keepId = null) {
+      sessions = sessions.filter(s => s.messages.length > 0 || s.id === keepId);
+      saveSessions();
+    }
+
+    function deleteChat(id, event) {
+      event.stopPropagation();
+      sessions = sessions.filter(s => s.id !== id);
+      saveSessions();
+
+      if (currentSessionId === id) {
+        if (sessions.length > 0) {
+          currentSessionId = sessions[0].id;
+        } else {
+          startNewChat();
+          return;
+        }
+      }
+      renderSidebar();
+      renderCurrentChat();
+    }
+
+    function deleteAllChats() {
+      if (sessions.length === 0) return;
+      if (confirm("Are you sure you want to delete all chats?")) {
+        sessions = [];
+        saveSessions();
+        startNewChat();
+      }
+    }
+
     function renderSidebar() {
       const historyList = document.getElementById('chat-history-list');
+      const deleteAllBtn = document.getElementById('delete-all-btn');
       historyList.innerHTML = '';
+
+      if (sessions.length === 0) {
+        deleteAllBtn.style.display = 'none';
+        return;
+      }
+      deleteAllBtn.style.display = 'flex';
 
       sessions.forEach(session => {
         const item = document.createElement('div');
         item.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
-        item.textContent = session.title || 'Chat Session';
         item.onclick = () => switchSession(session.id);
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'history-title';
+        titleEl.textContent = session.title || 'Chat Session';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-chat-btn';
+        deleteBtn.ariaLabel = 'Delete chat';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        deleteBtn.onclick = (e) => deleteChat(session.id, e);
+
+        item.appendChild(titleEl);
+        item.appendChild(deleteBtn);
         historyList.appendChild(item);
       });
     }
 
     function startNewChat() {
+      removeUnusedSessions();
+
       const newSession = {
         id: Date.now().toString(),
         title: 'New Chat',
@@ -386,12 +617,15 @@
       saveSessions();
       renderSidebar();
       renderCurrentChat();
+      closeSidebar();
     }
 
     function switchSession(id) {
       currentSessionId = id;
+      removeUnusedSessions(currentSessionId);
       renderSidebar();
       renderCurrentChat();
+      closeSidebar();
     }
 
     function renderCurrentChat() {
@@ -460,7 +694,6 @@
 
       let session = sessions.find(s => s.id === currentSessionId);
       
-      // Auto-title the session from the first message
       if (session.messages.length === 0) {
         session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
       }
@@ -469,7 +702,6 @@
       saveSessions();
       renderSidebar();
 
-      // Display User Message UI
       const userRow = document.createElement('div');
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
@@ -481,7 +713,6 @@
       inputEl.disabled = true;
       sendBtn.disabled = true;
 
-      // Display Bot Shell
       const botRow = document.createElement('div');
       botRow.className = 'message-row';
       botRow.innerHTML = `
@@ -549,6 +780,13 @@
                 responseContent.textContent = fullResponse;
                 chatBox.scrollTop = chatBox.scrollHeight;
               }
+
+              if (parsed.done) {
+                const promptTokens = parsed.prompt_eval_count || 0;
+                const evalTokens = parsed.eval_count || 0;
+                totalTokens += (promptTokens + evalTokens);
+                updateTotalTokensDisplay();
+              }
             } catch (e) {}
           }
         }
@@ -563,6 +801,12 @@
               if (fullResponse === '') responseContent.textContent = '';
               fullResponse += parsed.message.content;
               responseContent.textContent = fullResponse;
+            }
+            if (parsed.done) {
+              const promptTokens = parsed.prompt_eval_count || 0;
+              const evalTokens = parsed.eval_count || 0;
+              totalTokens += (promptTokens + evalTokens);
+              updateTotalTokensDisplay();
             }
           } catch (e) {}
         }
@@ -585,11 +829,12 @@
       }
     }
 
-    // Initialize default session on load
+    updateTotalTokensDisplay();
     if (sessions.length === 0) {
       startNewChat();
     } else {
       currentSessionId = sessions[0].id;
+      removeUnusedSessions(currentSessionId);
       renderSidebar();
       renderCurrentChat();
     }
