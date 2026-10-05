@@ -557,13 +557,6 @@
               <span class="slider"></span>
             </label>
           </div>
-          <div class="input-toggle-item" title="Enable live web search">
-            <span class="toggle-text">Search</span>
-            <label class="switch">
-              <input type="checkbox" id="search-toggle" onchange="toggleSearchSetting(this.checked)">
-              <span class="slider"></span>
-            </label>
-          </div>
         </div>
 
         <textarea id="user-input" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
@@ -574,7 +567,7 @@
       </div>
     </div>
 
-    <div class="app-version">v1.3</div>
+    <div class="app-version">v1.4</div>
   </div>
 
   <script>
@@ -584,14 +577,12 @@
     let sessions = JSON.parse(localStorage.getItem('jakeboss_sessions') || '[]');
     let totalTokens = parseInt(localStorage.getItem('jakeboss_total_tokens') || '0', 10);
     let enableThinking = JSON.parse(localStorage.getItem('jakeboss_enable_thinking') ?? 'false');
-    let enableSearch = JSON.parse(localStorage.getItem('jakeboss_enable_search') ?? 'false');
     let currentSessionId = null;
 
     let abortController = null;
     let isGenerating = false;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
-    document.getElementById('search-toggle').checked = enableSearch;
 
     const textarea = document.getElementById('user-input');
     textarea.addEventListener('input', function() {
@@ -602,11 +593,6 @@
     function toggleThinkingSetting(value) {
       enableThinking = value;
       localStorage.setItem('jakeboss_enable_thinking', JSON.stringify(enableThinking));
-    }
-
-    function toggleSearchSetting(value) {
-      enableSearch = value;
-      localStorage.setItem('jakeboss_enable_search', JSON.stringify(enableSearch));
     }
 
     function toggleSidebar() {
@@ -816,31 +802,6 @@
       }
     }
 
-    async function searchDuckDuckGo(query) {
-      try {
-        const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&origin=*`);
-        const data = await res.json();
-        if (data.AbstractText) return data.AbstractText;
-        if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-          const topics = data.RelatedTopics.filter(t => t.Text).slice(0, 3).map(t => t.Text);
-          if (topics.length > 0) return topics.join('\n- ');
-        }
-      } catch (e) {}
-
-      try {
-        const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`);
-        const data = await res.json();
-        if (data && data.query && data.query.search.length > 0) {
-          return data.query.search.slice(0, 3)
-            .map(i => i.snippet.replace(/<[^>]*>/g, ''))
-            .filter(t => t.length > 0)
-            .join('\n- ');
-        }
-      } catch (e) {}
-
-      return "";
-    }
-
     async function sendMessage(prompt) {
       const inputEl = document.getElementById('user-input');
       const chatBox = document.getElementById('chat-box');
@@ -876,7 +837,7 @@
             <div class="thinking-label">Thinking...</div>
             <span class="thinking-content"></span>
           </div>
-          <div class="response-content">${enableSearch ? '🔍 Searching web...' : '...'}</div>
+          <div class="response-content">...</div>
         </div>
       `;
       chatBox.appendChild(botRow);
@@ -894,18 +855,9 @@
       let fullResponse = '';
 
       try {
-        let webContext = '';
-        if (enableSearch) {
-          webContext = await searchDuckDuckGo(prompt);
-          responseContent.textContent = "Thinking...";
-        }
-
         let apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
 
-        if (webContext) {
-          const lastIndex = apiMessages.length - 1;
-          apiMessages[lastIndex].content = `[Web Search Context]\n- ${webContext}\n\n[User Query]\n${prompt}`;
-        } else if (!enableThinking) {
+        if (!enableThinking) {
           apiMessages.unshift({
             role: 'system',
             content: 'Be clear and direct. Answer immediately without internal reasoning or chain-of-thought.'
@@ -915,7 +867,7 @@
         const requestBody = {
           model: modelName,
           messages: apiMessages,
-          think: enableSearch ? false : enableThinking,
+          think: enableThinking,
           stream: true
         };
 
@@ -946,7 +898,7 @@
             try {
               const parsed = JSON.parse(trimmed);
 
-              if (enableThinking && !enableSearch && parsed.message && parsed.message.thinking) {
+              if (enableThinking && parsed.message && parsed.message.thinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
                 thinkingContent.textContent = fullThinking;
@@ -973,7 +925,7 @@
         if (streamBuffer.trim()) {
           try {
             const parsed = JSON.parse(streamBuffer.trim());
-            if (enableThinking && !enableSearch && parsed.message && parsed.message.thinking) {
+            if (enableThinking && parsed.message && parsed.message.thinking) {
               fullThinking += parsed.message.thinking;
             }
             if (parsed.message && parsed.message.content) {
@@ -993,7 +945,7 @@
         session.messages.push({
           role: 'assistant',
           content: fullResponse,
-          thinking: (enableThinking && !enableSearch) ? fullThinking : ''
+          thinking: enableThinking ? fullThinking : ''
         });
         saveSessions();
 
@@ -1003,7 +955,7 @@
             session.messages.push({
               role: 'assistant',
               content: fullResponse + " [Interrupted]",
-              thinking: (enableThinking && !enableSearch) ? fullThinking : ''
+              thinking: enableThinking ? fullThinking : ''
             });
             saveSessions();
           } else {
