@@ -477,9 +477,23 @@
     let currentSessionId = null;
     let abortController = null;
     let isGenerating = false;
+    let userScrolledUp = false;
 
     document.getElementById('thinking-toggle').checked = enableThinking;
     document.getElementById('search-toggle').checked = enableSearch;
+
+    const chatBoxEl = document.getElementById('chat-box');
+    chatBoxEl.addEventListener('scroll', () => {
+      const threshold = 50;
+      const isAtBottom = chatBoxEl.scrollHeight - chatBoxEl.scrollTop - chatBoxEl.clientHeight <= threshold;
+      userScrolledUp = !isAtBottom;
+    });
+
+    function scrollToBottomIfNeeded() {
+      if (!userScrolledUp) {
+        chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
+      }
+    }
 
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('open');
@@ -532,11 +546,10 @@
     }
 
     function renderCurrentChat() {
-      const chatBox = document.getElementById('chat-box');
-      chatBox.innerHTML = '';
+      chatBoxEl.innerHTML = '';
       const session = sessions.find(s => s.id === currentSessionId);
       if (!session || session.messages.length === 0) {
-        chatBox.innerHTML = `<div class="message-row"><div class="message bot"><div class="response-content">Hello! I am your personal assistant. How can I help you today?</div></div></div>`;
+        chatBoxEl.innerHTML = `<div class="message-row"><div class="message bot"><div class="response-content">Hello! I am your personal assistant. How can I help you today?</div></div></div>`;
         return;
       }
       session.messages.forEach(msg => {
@@ -549,9 +562,10 @@
           row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div></div>`;
           row.querySelector('.response-content').textContent = msg.content;
         }
-        chatBox.appendChild(row);
+        chatBoxEl.appendChild(row);
       });
-      chatBox.scrollTop = chatBox.scrollHeight;
+      userScrolledUp = false;
+      chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
     }
 
     function handleSendClick() {
@@ -604,7 +618,6 @@
 
     async function sendMessage(prompt) {
       const inputEl = document.getElementById('user-input');
-      const chatBox = document.getElementById('chat-box');
       const session = sessions.find(s => s.id === currentSessionId);
 
       if (session.messages.length === 0) {
@@ -619,7 +632,7 @@
       userRow.className = 'message-row';
       userRow.innerHTML = `<div class="message user"></div>`;
       userRow.querySelector('.message').textContent = prompt;
-      chatBox.appendChild(userRow);
+      chatBoxEl.appendChild(userRow);
 
       inputEl.value = '';
 
@@ -634,12 +647,14 @@
           <div class="response-content"></div>
         </div>
       `;
-      chatBox.appendChild(botRow);
+      chatBoxEl.appendChild(botRow);
 
       const thinkingBlock = botRow.querySelector('.thinking-block');
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
-      chatBox.scrollTop = chatBox.scrollHeight;
+
+      userScrolledUp = false;
+      chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
 
       abortController = new AbortController();
       isGenerating = true;
@@ -713,7 +728,7 @@
                 totalTokens += (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                 updateTotalTokensDisplay();
               }
-              chatBox.scrollTop = chatBox.scrollHeight;
+              scrollToBottomIfNeeded();
             } catch (err) {}
           }
         }
