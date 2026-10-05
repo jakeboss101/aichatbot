@@ -818,47 +818,25 @@
 
     async function searchDuckDuckGo(query) {
       try {
-        const proxyUrl = "https://api.allorigins.win/raw?url=";
-        const targetUrl = encodeURIComponent(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const res = await fetch(proxyUrl + targetUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const htmlText = await res.text();
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlText, 'text/html');
-          
-          const snippets = Array.from(doc.querySelectorAll('.result__snippet, .result__url'))
-            .slice(0, 3)
-            .map(el => el.textContent.trim())
-            .filter(text => text.length > 0);
-
-          if (snippets.length > 0) {
-            return snippets.join('\n- ');
-          }
+        const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&origin=*`);
+        const data = await res.json();
+        if (data.AbstractText) return data.AbstractText;
+        if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+          const topics = data.RelatedTopics.filter(t => t.Text).slice(0, 3).map(t => t.Text);
+          if (topics.length > 0) return topics.join('\n- ');
         }
-      } catch (err) {
-        console.warn("DuckDuckGo scraping failed or timed out, trying Wikipedia fallback...", err);
-      }
+      } catch (e) {}
 
       try {
-        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`;
-        const res = await fetch(wikiUrl);
+        const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`);
         const data = await res.json();
-        
         if (data && data.query && data.query.search.length > 0) {
           return data.query.search.slice(0, 3)
-            .map(item => item.snippet.replace(/<[^>]*>?/gm, ''))
-            .filter(text => text.length > 0)
+            .map(i => i.snippet.replace(/<[^>]*>/g, ''))
+            .filter(t => t.length > 0)
             .join('\n- ');
         }
-      } catch (err) {
-        console.error("Fallback search failed:", err);
-      }
+      } catch (e) {}
 
       return "";
     }
