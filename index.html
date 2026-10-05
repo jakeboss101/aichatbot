@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>JakeBoss AI Assistant</title>
+
+  <!-- Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Highlight.js for code block highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
   <style>
     :root {
       --bg-color: #0e1117;
@@ -272,7 +279,6 @@
       font-size: 1rem;
       line-height: 1.5;
       word-break: break-word;
-      white-space: pre-wrap;
     }
 
     .message.user {
@@ -281,6 +287,7 @@
       border: 1px solid var(--border-color);
       color: var(--text-main);
       border-radius: 18px 18px 4px 18px;
+      white-space: pre-wrap;
     }
 
     .message.bot {
@@ -289,6 +296,22 @@
       color: var(--text-main);
       border-radius: 18px 18px 18px 4px;
       padding-left: 0;
+    }
+
+    /* Markdown & Code Block Styling */
+    .response-content p { margin-bottom: 8px; }
+    .response-content p:last-child { margin-bottom: 0; }
+    .response-content pre {
+      background-color: #0d1117;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    .response-content code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.9rem;
     }
 
     .thinking-block {
@@ -324,9 +347,7 @@
       cursor: pointer;
     }
 
-    .preview-btn:hover {
-      opacity: 0.9;
-    }
+    .preview-btn:hover { opacity: 0.9; }
 
     .input-wrapper {
       padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) 12px;
@@ -467,10 +488,7 @@
       margin-bottom: 12px;
     }
 
-    .preview-header h3 {
-      font-size: 1rem;
-      color: var(--text-main);
-    }
+    .preview-header h3 { font-size: 1rem; color: var(--text-main); }
 
     .close-preview-btn {
       background: var(--danger-color);
@@ -725,217 +743,11 @@
           row.querySelector('.message').textContent = msg.content;
         } else {
           row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div><div class="preview-container"></div></div>`;
-          row.querySelector('.response-content').textContent = msg.content;
-
+          row.querySelector('.response-content').innerHTML = marked.parse(msg.content || '');
+          
           const htmlCode = extractHtmlCode(msg.content);
           if (htmlCode) {
             const btn = document.createElement('button');
             btn.className = 'preview-btn';
             btn.innerHTML = '▶ Preview HTML';
-            btn.onclick = () => openHtmlPreview(htmlCode);
-            row.querySelector('.preview-container').appendChild(btn);
-          }
-        }
-        chatBoxEl.appendChild(row);
-      });
-      userIsScrolling = false;
-      scrollBottomBtn.style.display = 'none';
-      chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
-    }
-
-    function handleSendClick() {
-      const inputEl = document.getElementById('user-input');
-      const prompt = inputEl.value.trim();
-      if (!prompt) return;
-
-      if (isGenerating && abortController) {
-        abortController.abort();
-        return;
-      }
-
-      sendMessage(prompt);
-    }
-
-    async function getUserLocation() {
-      try {
-        const ipRes = await fetch('[https://ipapi.co/json/](https://ipapi.co/json/)');
-        if (ipRes.ok) {
-          const ipData = await ipRes.json();
-          const locationParts = [ipData.city, ipData.region, ipData.country_name].filter(Boolean);
-          if (locationParts.length > 0) return locationParts.join(', ');
-        }
-      } catch (e) {}
-
-      return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve("Location Unavailable");
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            try {
-              const res = await fetch(`[https://nominatim.openstreetmap.org/reverse?format=json&lat=$](https://nominatim.openstreetmap.org/reverse?format=json&lat=$){pos.coords.latitude}&lon=${pos.coords.longitude}`);
-              const data = await res.json();
-              const addr = data.address || {};
-              const city = addr.city || addr.town || addr.village || addr.hamlet || "";
-              const state = addr.state || "";
-              const country = addr.country || "";
-              const formattedLoc = [city, state, country].filter(Boolean).join(", ");
-              resolve(formattedLoc || "Location Unavailable");
-            } catch (e) { resolve("Location Unavailable"); }
-          },
-          () => resolve("Location Denied/Unavailable"),
-          { timeout: 5000 }
-        );
-      });
-    }
-
-    async function sendMessage(prompt) {
-      const inputEl = document.getElementById('user-input');
-      const session = sessions.find(s => s.id === currentSessionId);
-
-      if (session.messages.length === 0) {
-        session.title = prompt.length > 18 ? prompt.substring(0, 18) + '...' : prompt;
-      }
-
-      session.messages.push({ role: 'user', content: prompt });
-      localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
-      renderSidebar();
-
-      const userRow = document.createElement('div');
-      userRow.className = 'message-row';
-      userRow.innerHTML = `<div class="message user"></div>`;
-      userRow.querySelector('.message').textContent = prompt;
-      chatBoxEl.appendChild(userRow);
-
-      inputEl.value = '';
-
-      const botRow = document.createElement('div');
-      botRow.className = 'message-row';
-      botRow.innerHTML = `
-        <div class="message bot">
-          <div class="thinking-block" style="display: none;">
-            <div class="thinking-label">Thinking...</div>
-            <span class="thinking-content"></span>
-          </div>
-          <div class="response-content"></div>
-          <div class="preview-container"></div>
-        </div>
-      `;
-      chatBoxEl.appendChild(botRow);
-
-      const thinkingBlock = botRow.querySelector('.thinking-block');
-      const thinkingContent = botRow.querySelector('.thinking-content');
-      const responseContent = botRow.querySelector('.response-content');
-      const previewContainer = botRow.querySelector('.preview-container');
-
-      userIsScrolling = false;
-      scrollBottomBtn.style.display = 'none';
-      chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
-
-      abortController = new AbortController();
-      isGenerating = true;
-      const sendBtn = document.getElementById('send-btn');
-      sendBtn.classList.add('stop');
-
-      const now = new Date();
-      const dateStr = now.toLocaleDateString();
-      const timeStr = now.toLocaleTimeString();
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const locationDetails = await getUserLocation();
-
-      const systemMessage = {
-        role: "system",
-        content: `User Context:\n- Current Date: ${dateStr}\n- Current Time: ${timeStr} (${timeZone})\n- Current Location: ${locationDetails}`
-      };
-
-      const payloadMessages = [
-        systemMessage,
-        ...session.messages.map(m => ({ role: m.role, content: m.content }))
-      ];
-
-      let fullThinking = '';
-      let fullResponse = '';
-
-      try {
-        const response = await fetch(`${baseUrl}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: modelName,
-            messages: payloadMessages,
-            think: enableThinking,
-            search: enableSearch,
-            stream: true
-          }),
-          signal: abortController.signal
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const parsed = JSON.parse(line);
-
-              if (parsed.message?.thinking) {
-                fullThinking += parsed.message.thinking;
-                thinkingBlock.style.display = 'block';
-                thinkingContent.textContent = fullThinking;
-              }
-
-              if (parsed.message?.content) {
-                fullResponse += parsed.message.content;
-                responseContent.textContent = fullResponse;
-              }
-
-              if (parsed.done) {
-                totalTokens += (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
-                updateTotalTokensDisplay();
-              }
-              scrollToBottomIfNeeded();
-            } catch (err) {}
-          }
-        }
-
-        const htmlCode = extractHtmlCode(fullResponse);
-        if (htmlCode) {
-          previewContainer.innerHTML = '';
-          const btn = document.createElement('button');
-          btn.className = 'preview-btn';
-          btn.innerHTML = '▶ Preview HTML';
-          btn.onclick = () => openHtmlPreview(htmlCode);
-          previewContainer.appendChild(btn);
-        }
-
-        session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
-        localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
-
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          responseContent.textContent = `Error connecting to model: ${err.message}`;
-          responseContent.style.color = 'var(--danger-color)';
-        }
-      } finally {
-        isGenerating = false;
-        sendBtn.classList.remove('stop');
-        scrollBottomBtn.style.display = 'none';
-        abortController = null;
-      }
-    }
-
-    updateTotalTokensDisplay();
-    if (sessions.length === 0) startNewChat();
-    else { currentSessionId = sessions[0].id; renderSidebar(); renderCurrentChat(); }
-  </script>
-</body>
-</html>
+            btn
