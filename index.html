@@ -567,6 +567,17 @@
       sendMessage(prompt);
     }
 
+    function getUserLocation() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve("Unavailable");
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),
+          () => resolve("Denied/Unavailable"),
+          { timeout: 4000 }
+        );
+      });
+    }
+
     async function sendMessage(prompt) {
       const inputEl = document.getElementById('user-input');
       const chatBox = document.getElementById('chat-box');
@@ -611,6 +622,22 @@
       const sendBtn = document.getElementById('send-btn');
       sendBtn.classList.add('stop');
 
+      const now = new Date();
+      const dateStr = now.toLocaleDateString();
+      const timeStr = now.toLocaleTimeString();
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const locationCoords = await getUserLocation();
+
+      const systemMessage = {
+        role: "system",
+        content: `User Context:\n- Current Date: ${dateStr}\n- Current Time: ${timeStr} (${timeZone})\n- Coordinates: ${locationCoords}`
+      };
+
+      const payloadMessages = [
+        systemMessage,
+        ...session.messages.map(m => ({ role: m.role, content: m.content }))
+      ];
+
       let fullThinking = '';
       let fullResponse = '';
 
@@ -620,7 +647,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: modelName,
-            messages: session.messages.map(m => ({ role: m.role, content: m.content })),
+            messages: payloadMessages,
             think: enableThinking,
             search: enableSearch,
             stream: true
