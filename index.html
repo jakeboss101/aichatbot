@@ -341,74 +341,68 @@
       border-top: 1px solid var(--border-color);
     }
 
+    /* Features Bar (Toggles) */
+    .features-bar {
+      max-width: 850px;
+      margin: 0 auto 12px auto;
+      display: flex;
+      gap: 10px;
+      padding: 0 4px;
+    }
+
+    .feature-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .feature-btn svg {
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .feature-btn:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .feature-btn.active {
+      background-color: rgba(56, 189, 248, 0.1);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .feature-btn.active svg {
+      opacity: 1;
+      fill: var(--accent-color);
+    }
+
+    /* Input Card */
     .input-card {
       max-width: 850px;
       margin: 0 auto;
       background-color: var(--input-bg);
       border: 1px solid var(--border-color);
       border-radius: 24px;
-      padding: 8px 12px;
+      padding: 10px 14px;
       display: flex;
       align-items: flex-end;
-      gap: 10px;
+      gap: 12px;
       transition: border-color 0.2s;
     }
 
     .input-card:focus-within { border-color: var(--accent-color); }
-
-    .input-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding-right: 8px;
-      padding-bottom: 6px;
-      border-right: 1px solid var(--border-color);
-    }
-
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .toggle-text {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 28px;
-      height: 16px;
-    }
-
-    .switch input { opacity: 0; width: 0; height: 0; }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background-color: var(--border-color);
-      border-radius: 20px;
-      transition: .2s;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 10px;
-      width: 10px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      border-radius: 50%;
-      transition: .2s;
-    }
-
-    input:checked + .slider { background-color: var(--accent-color); }
-    input:checked + .slider:before { transform: translateX(12px); background-color: #0f172a; }
 
     textarea {
       flex: 1;
@@ -416,7 +410,7 @@
       border: none;
       outline: none;
       color: var(--text-main);
-      font-size: 1rem;
+      font-size: 1.05rem;
       resize: none;
       max-height: 160px;
       min-height: 24px;
@@ -427,8 +421,8 @@
     textarea::placeholder { color: var(--text-muted); }
 
     .send-btn {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       border: none;
       background: var(--accent-color);
@@ -442,7 +436,7 @@
     }
 
     .send-btn.stop { background: var(--danger-color); color: #ffffff; }
-    .send-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
     @media (max-width: 768px) {
       .menu-toggle-btn { display: flex; }
@@ -452,7 +446,10 @@
         transform: translateX(-100%);
       }
       .sidebar.open { transform: translateX(0); }
-      .toggle-text { display: none; }
+      .feature-btn {
+        flex: 1;
+        justify-content: center;
+      }
     }
   </style>
 </head>
@@ -484,23 +481,24 @@
     <div id="chat-box"></div>
 
     <div class="input-wrapper">
+      
+      <!-- Features Bar for Toggles -->
+      <div class="features-bar">
+        <button id="think-toggle-btn" class="feature-btn">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C6.5 2 2 6.5 2 12c0 2.4 1.1 4.5 2.8 6h14.4c1.7-1.5 2.8-3.6 2.8-6 0-5.5-4.5-10-10-10zm0 16H8v-1h8v1zm2.5-3H9.5v-1h5v1zm1.5-2.5h-8v-1h8v1z"/>
+          </svg>
+          Think
+        </button>
+        <button id="search-toggle-btn" class="feature-btn">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+          </svg>
+          Web
+        </button>
+      </div>
+
       <div class="input-card">
-        <div class="input-controls">
-          <div class="control-group">
-            <span class="toggle-text">Think</span>
-            <label class="switch">
-              <input type="checkbox" id="thinking-toggle">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="control-group">
-            <span class="toggle-text">Web</span>
-            <label class="switch">
-              <input type="checkbox" id="search-toggle">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
         <textarea id="user-input" placeholder="Type a message..." rows="1"></textarea>
         <button id="send-btn" class="send-btn" onclick="handleSendClick()">
           <svg id="send-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -546,8 +544,8 @@
       userInput: document.getElementById('user-input'),
       sendBtn: document.getElementById('send-btn'),
       totalTokens: document.getElementById('total-tokens'),
-      thinkingToggle: document.getElementById('thinking-toggle'),
-      searchToggle: document.getElementById('search-toggle')
+      btnThink: document.getElementById('think-toggle-btn'),
+      btnSearch: document.getElementById('search-toggle-btn')
     };
 
     // Setup Marked with Highlight.js
@@ -576,20 +574,30 @@
       }
     }
 
+    function updateToggleButtonUI(btn, isActive) {
+      if (isActive) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+
     function init() {
       fetchUserContextSilently();
 
-      elements.thinkingToggle.checked = state.enableThinking;
-      elements.searchToggle.checked = state.enableSearch;
+      updateToggleButtonUI(elements.btnThink, state.enableThinking);
+      updateToggleButtonUI(elements.btnSearch, state.enableSearch);
 
-      elements.thinkingToggle.addEventListener('change', (e) => {
-        state.enableThinking = e.target.checked;
+      elements.btnThink.addEventListener('click', () => {
+        state.enableThinking = !state.enableThinking;
         localStorage.setItem(CONFIG.keys.thinking, state.enableThinking);
+        updateToggleButtonUI(elements.btnThink, state.enableThinking);
       });
 
-      elements.searchToggle.addEventListener('change', (e) => {
-        state.enableSearch = e.target.checked;
+      elements.btnSearch.addEventListener('click', () => {
+        state.enableSearch = !state.enableSearch;
         localStorage.setItem(CONFIG.keys.search, state.enableSearch);
+        updateToggleButtonUI(elements.btnSearch, state.enableSearch);
       });
 
       elements.userInput.addEventListener('input', autoResizeTextarea);
@@ -723,11 +731,16 @@
         elements.chatBox.appendChild(row);
       });
       
-      scrollToBottom();
+      scrollToBottom(true);
     }
 
-    function scrollToBottom() {
-      elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+    // Smart auto-scroll: only scrolls down if user is already at the bottom or forced
+    function scrollToBottom(force = false) {
+      const chatBox = elements.chatBox;
+      const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 100;
+      if (force || isNearBottom) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
     }
 
     function handleSendClick() {
@@ -742,11 +755,9 @@
       sendMessage(prompt);
     }
 
-    // Generates the system payload sent silently to Ollama
     function generateSystemPrompt() {
       const now = new Date();
       
-      // Aggressively instruct the model based on the toggle
       const thinkingInstruction = state.enableThinking
         ? "INSTRUCTION: You are in THINKING MODE. You MUST show your detailed step-by-step reasoning process inside <think>...</think> tags before providing your final response."
         : "CRITICAL INSTRUCTION: You are in DIRECT MODE. You MUST NOT reason, deliberate, or use <think> tags. Do not explain your thought process. Output ONLY the immediate, direct, final answer.";
@@ -793,7 +804,9 @@
       const thinkingBlock = botRow.querySelector('.thinking-block');
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
-      scrollToBottom();
+      
+      // Force scroll down when sending a new message
+      scrollToBottom(true);
 
       state.abortController = new AbortController();
       state.isGenerating = true;
@@ -802,7 +815,6 @@
       let fullThinking = '';
       let fullResponse = '';
 
-      // Payload includes hidden system prompt context at index 0
       const formattedMessages = [
         generateSystemPrompt(),
         ...session.messages.map(m => ({ role: m.role, content: m.content }))
@@ -817,7 +829,6 @@
             messages: formattedMessages,
             stream: true,
             options: {
-              // High temp for creative thinking, Low temp for instant direct answers
               temperature: state.enableThinking ? 0.7 : 0.1
             }
           }),
@@ -858,6 +869,8 @@
                 state.totalTokens += (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                 updateTotalTokensDisplay();
               }
+              
+              // Smart scroll check during stream chunks
               scrollToBottom();
             } catch (err) {}
           }
