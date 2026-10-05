@@ -511,8 +511,8 @@
 
   <script>
     const CONFIG = {
-      baseUrl: "https://recycling-belts-paperback-jazz.trycloudflare.com",
-      modelName: "qwen3.5:4b",
+      baseUrl: "https://recycling-belts-paperback-jazz.trycloudflare.com", // Your Cloudflare Tunnel URL
+      modelName: "qwen3.5:4b", // Your model
       keys: {
         sessions: 'jakeboss_sessions',
         tokens: 'jakeboss_total_tokens',
@@ -745,17 +745,15 @@
     // Generates the system payload sent silently to Ollama
     function generateSystemPrompt() {
       const now = new Date();
+      
+      // Aggressively instruct the model based on the toggle
+      const thinkingInstruction = state.enableThinking
+        ? "INSTRUCTION: You are in THINKING MODE. You MUST show your detailed step-by-step reasoning process inside <think>...</think> tags before providing your final response."
+        : "CRITICAL INSTRUCTION: You are in DIRECT MODE. You MUST NOT reason, deliberate, or use <think> tags. Do not explain your thought process. Output ONLY the immediate, direct, final answer.";
+
       return {
         role: 'system',
-        content: `User Context Information:
-- Current Local Date & Time: ${now.toString()}
-- ISO Timestamp: ${now.toISOString()}
-- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
-- IP Address: ${state.userInfo.ip}
-- Location: ${state.userInfo.location}
-- ISP: ${state.userInfo.isp}
-
-Use this context naturally if relevant (e.g., answering localized or time-sensitive questions). Do not explicitly state that you were given system metadata unless necessary to answer the question.`
+        content: `${thinkingInstruction}\n\nUser Context Information:\n- Current Local Date & Time: ${now.toString()}\n- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n- IP Address: ${state.userInfo.ip}\n- Location: ${state.userInfo.location}\n- ISP: ${state.userInfo.isp}\n\nUse this context naturally if relevant.`
       };
     }
 
@@ -817,9 +815,11 @@ Use this context naturally if relevant (e.g., answering localized or time-sensit
           body: JSON.stringify({
             model: CONFIG.modelName,
             messages: formattedMessages,
-            think: state.enableThinking,
-            search: state.enableSearch,
-            stream: true
+            stream: true,
+            options: {
+              // High temp for creative thinking, Low temp for instant direct answers
+              temperature: state.enableThinking ? 0.7 : 0.1
+            }
           }),
           signal: state.abortController.signal
         });
