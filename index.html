@@ -551,7 +551,7 @@
         <!-- Model Selector Dropdown -->
         <select id="model-select" class="model-select" onchange="changeModel(this.value)">
           <option value="huihui_ai/qwen2.5-abliterate:7b">Qwen 2.5 7B Abliterated</option>
-          <option value="hf.co/janhq/Jan-v3.5-4B-gguf:Q4_K_M">Jan v3.5 4B</option>
+          <option value="jan3.5">Jan v3.5 4B</option>
         </select>
         <div class="token-stats-badge">
           Total Tokens: <span id="total-tokens-display">0</span>
@@ -573,7 +573,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.5.0</div>
+  <div class="version-tag">v1.6.0</div>
 
   <script>
     const TUNNEL_BASE_URL = "https://flexible-compiler-overnight-certificate.trycloudflare.com";
@@ -919,7 +919,6 @@
       let fullResponse = '';
 
       try {
-        // Send only standard chat messages with no system prompt
         const apiMessages = getBoundedMessages(session.messages).map(m => ({ 
           role: m.role, 
           content: m.content 
