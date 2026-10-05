@@ -93,6 +93,13 @@
             font-size: 0.9rem;
         }
 
+        .search-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
         .input-group {
             display: flex;
             gap: 10px;
@@ -148,8 +155,10 @@
 
     <div class="controls">
         <div class="options-bar">
-            <label>
-                <input type="checkbox" id="enableSearch" checked> Enable Web Search
+            <label class="search-toggle" title="Enable live DuckDuckGo web search">
+                <input type="checkbox" id="search-enable-checkbox" checked>
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">🌐 Search</span>
             </label>
         </div>
         <div class="input-group">
@@ -161,48 +170,41 @@
 
 <script>
     const OLLAMA_ENDPOINT = 'http://localhost:11434/api/chat';
-    const MODEL_NAME = 'qwen2.5'; // Update to your Ollama model tag
+    const MODEL_NAME = 'qwen2.5';
 
     let conversationHistory = [];
     let currentAbortController = null;
 
-    async function fetchWebSearchResults(query, signal) {
+    async function searchDuckDuckGo(query) {
         try {
-            // DuckDuckGo Instant Answer API (JSON output)
-            const endpoint = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-            const response = await fetch(endpoint, { signal });
+            const proxyUrl = "https://api.allorigins.win/get?url=";
+            const targetUrl = encodeURIComponent(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
             
-            if (!response.ok) return '';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+            const res = await fetch(proxyUrl + targetUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
             
-            const data = await response.json();
-            let contextParts = [];
-
-            if (data.AbstractText) {
-                contextParts.push(`Abstract (${data.Heading}): ${data.AbstractText}`);
-            }
-
-            if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-                const topics = data.RelatedTopics
-                    .filter(t => t.Text)
-                    .slice(0, 3)
-                    .map(t => `- ${t.Text}`);
-                if (topics.length > 0) {
-                    contextParts.push("Related Context:\n" + topics.join('\n'));
-                }
-            }
-
-            return contextParts.join('\n\n');
+            const data = await res.json();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.contents, 'text/html');
+            const snippets = Array.from(doc.querySelectorAll('.result__snippet'))
+                .slice(0, 3)
+                .map(el => el.textContent.trim())
+                .filter(text => text.length > 0);
+            
+            return snippets.length > 0 ? snippets.join('\n- ') : '';
         } catch (err) {
-            if (err.name === 'AbortError') throw err;
-            console.warn('Web search failed:', err);
-            return '';
+            console.warn("Search bypassed or failed:", err);
+            return "";
         }
     }
 
     async function sendMessage() {
         const inputEl = document.getElementById('promptInput');
         const sendBtn = document.getElementById('sendBtn');
-        const enableSearch = document.getElementById('enableSearch').checked;
+        const isSearchEnabled = document.getElementById('search-enable-checkbox').checked;
         const statusEl = document.getElementById('status');
         const prompt = inputEl.value.trim();
 
@@ -219,15 +221,16 @@
 
         try {
             let apiMessages = [...conversationHistory];
+            let webContext = "";
 
-            if (enableSearch) {
-                statusEl.textContent = 'Searching web...';
-                const searchResults = await fetchWebSearchResults(prompt, currentAbortController.signal);
+            if (isSearchEnabled) {
+                statusEl.textContent = '🔍 Searching web...';
+                webContext = await searchDuckDuckGo(prompt);
                 
-                if (searchResults) {
+                if (webContext) {
                     const systemContext = {
                         role: 'system',
-                        content: `Use the following real-time web search results to directly answer the user's latest query accurately:\n\n[SEARCH RESULTS]\n${searchResults}`
+                        content: `Live Web Search Results:\n- ${webContext}\n\nUse the above context if relevant.`
                     };
                     apiMessages.unshift(systemContext);
                 }
