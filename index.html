@@ -360,6 +360,16 @@
       font-size: 0.9rem;
     }
 
+    /* Dedicated block for busy server notice pinned to top */
+    .busy-block {
+      color: var(--text-thinking);
+      font-style: italic;
+      font-size: 0.9rem;
+      border-left: 3px solid var(--border-color);
+      padding-left: 10px;
+      margin-bottom: 12px;
+    }
+
     .thinking-block {
       color: var(--text-thinking);
       font-style: italic;
@@ -376,20 +386,6 @@
       color: var(--text-muted);
       margin-bottom: 4px;
       font-style: normal;
-    }
-
-    /* Style blockquotes (used for server busy notice) like thinking blocks */
-    .response-content blockquote {
-      color: var(--text-thinking);
-      font-style: italic;
-      font-size: 0.9rem;
-      border-left: 3px solid var(--border-color);
-      padding-left: 10px;
-      margin: 8px 0 12px 0;
-    }
-
-    .response-content blockquote p {
-      margin: 0;
     }
 
     .input-wrapper {
@@ -829,7 +825,13 @@
           row.innerHTML = `<div class="message user"></div>`;
           row.querySelector('.message').textContent = msg.content;
         } else {
-          row.innerHTML = `<div class="message bot">${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}<div class="response-content"></div></div>`;
+          row.innerHTML = `
+            <div class="message bot">
+              ${msg.busy ? `<div class="busy-block">${msg.busy}</div>` : ''}
+              ${msg.thinking ? `<div class="thinking-block"><div class="thinking-label">Thinking...</div>${msg.thinking}</div>` : ''}
+              <div class="response-content"></div>
+            </div>
+          `;
           const respContainer = row.querySelector('.response-content');
           respContainer.innerHTML = marked.parse(msg.content || '');
           formatCodeBlocks(respContainer);
@@ -910,6 +912,7 @@
       botRow.className = 'message-row';
       botRow.innerHTML = `
         <div class="message bot">
+          <div class="busy-block" style="display: none;"></div>
           <div class="thinking-block" style="display: none;">
             <div class="thinking-label">Thinking...</div>
             <span class="thinking-content"></span>
@@ -919,6 +922,7 @@
       `;
       chatBoxEl.appendChild(botRow);
 
+      const busyBlock = botRow.querySelector('.busy-block');
       const thinkingBlock = botRow.querySelector('.thinking-block');
       const thinkingContent = botRow.querySelector('.thinking-content');
       const responseContent = botRow.querySelector('.response-content');
@@ -984,6 +988,12 @@
             try {
               const parsed = JSON.parse(line);
 
+              // Position busy notification permanently above thinking
+              if (parsed.busy) {
+                busyBlock.style.display = 'block';
+                busyBlock.textContent = parsed.busy;
+              }
+
               if (parsed.message?.thinking) {
                 fullThinking += parsed.message.thinking;
                 thinkingBlock.style.display = 'block';
@@ -1006,7 +1016,12 @@
           }
         }
 
-        session.messages.push({ role: 'assistant', content: fullResponse, thinking: fullThinking });
+        session.messages.push({ 
+          role: 'assistant', 
+          content: fullResponse, 
+          thinking: fullThinking,
+          busy: busyBlock.style.display !== 'none' ? busyBlock.textContent : null 
+        });
         localStorage.setItem('jakeboss_sessions', JSON.stringify(sessions));
 
       } catch (err) {
