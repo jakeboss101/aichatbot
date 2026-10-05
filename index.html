@@ -567,13 +567,37 @@
       sendMessage(prompt);
     }
 
-    function getUserLocation() {
+    async function getUserLocation() {
+      try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          const locationParts = [ipData.city, ipData.region, ipData.country_name].filter(Boolean);
+          if (locationParts.length > 0) {
+            return locationParts.join(', ');
+          }
+        }
+      } catch (e) {}
+
       return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve("Unavailable");
+        if (!navigator.geolocation) return resolve("Location Unavailable");
         navigator.geolocation.getCurrentPosition(
-          (pos) => resolve(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),
-          () => resolve("Denied/Unavailable"),
-          { timeout: 4000 }
+          async (pos) => {
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+              const data = await res.json();
+              const addr = data.address || {};
+              const city = addr.city || addr.town || addr.village || addr.hamlet || "";
+              const state = addr.state || "";
+              const country = addr.country || "";
+              const formattedLoc = [city, state, country].filter(Boolean).join(", ");
+              resolve(formattedLoc || "Location Unavailable");
+            } catch (e) {
+              resolve("Location Unavailable");
+            }
+          },
+          () => resolve("Location Denied/Unavailable"),
+          { timeout: 5000 }
         );
       });
     }
@@ -626,11 +650,11 @@
       const dateStr = now.toLocaleDateString();
       const timeStr = now.toLocaleTimeString();
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const locationCoords = await getUserLocation();
+      const locationDetails = await getUserLocation();
 
       const systemMessage = {
         role: "system",
-        content: `User Context:\n- Current Date: ${dateStr}\n- Current Time: ${timeStr} (${timeZone})\n- Coordinates: ${locationCoords}`
+        content: `User Context:\n- Current Date: ${dateStr}\n- Current Time: ${timeStr} (${timeZone})\n- Current Location: ${locationDetails}`
       };
 
       const payloadMessages = [
